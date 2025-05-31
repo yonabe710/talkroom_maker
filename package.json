@@ -1,0 +1,24 @@
+{
+  "name": "talkroom_maker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "reload -b"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yonabe710/talkroom_maker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "reload": "^3.3.0"
+  },
+  "bugs": {
+    "url": "https://github.com/yonabe710/talkroom_maker/issues"
+  },
+  "homepage": "https://github.com/yonabe710/talkroom_maker#readme",
+  "keywords": [],
+  "description": ""
+}
