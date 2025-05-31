@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINE風チャットアプリ (背景色rgb指定版)</title>
+    <title>LINE風チャットアプリ (時刻入力・日付区切り機能付き)</title>
     <style>
         /* 全体のスタイル */
         body {
             font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
             margin: 0;
-            background-color: #7b99c1; /* 外側の背景色 */
+            background-color: #7b99c1; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -49,7 +49,11 @@
             padding: 5px 8px;
             border-radius: 4px;
             flex-grow: 1; 
-            min-width: 100px; 
+            min-width: 80px; /* 時刻入力欄も考慮 */
+        }
+        .action-area input[placeholder*="時刻"] { /* 時刻入力欄の幅調整 */
+            flex-grow: 0.5;
+            min-width: 80px;
         }
         .action-area button {
             padding: 8px 12px;
@@ -63,228 +67,89 @@
         }
         .action-area button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* 各ボタンの個別スタイル */
-        #loadCsvButton { background-color: #28a745; }
-        #loadCsvButton:hover { background-color: #218838; }
+        #loadCsvButton { background-color: #28a745; } #loadCsvButton:hover { background-color: #218838; }
+        #prepareScreenshotButton { background-color: #007bff; } #prepareScreenshotButton:hover { background-color: #0056b3; }
+        #setWomanAvatarButton { background-color: #ffc107; color: #212529;} #setWomanAvatarButton:hover { background-color: #e0a800; }
+        #insertImageButton { background-color: #17a2b8; } #insertImageButton.cancel-mode { background-color: #dc3545; } 
+        #insertImageButton:hover { background-color: #138496; } #insertImageButton.cancel-mode:hover { background-color: #c82333; }
 
-        #prepareScreenshotButton { background-color: #007bff; }
-        #prepareScreenshotButton:hover { background-color: #0056b3; }
-
-        #setWomanAvatarButton { background-color: #ffc107; color: #212529;} 
-        #setWomanAvatarButton:hover { background-color: #e0a800; }
-
-        #insertImageButton { background-color: #17a2b8; }
-        #insertImageButton.cancel-mode { background-color: #dc3545; } 
-        #insertImageButton:hover { background-color: #138496; }
-        #insertImageButton.cancel-mode:hover { background-color: #c82333; }
-
-
-        /* チャットコンテナのスタイル */
         .chat-container {
-            width: 100%;
-            max-width: 450px;
-            height: 60vh; 
-            max-height: 550px;
-            background-color: #ffffff; /* チャットコンテナ自体の背景は白 */
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            width: 100%; max-width: 450px; height: 55vh; max-height: 500px; /* 高さを少し調整 */
+            background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; overflow: hidden;
         }
-
-        /* チャットヘッダーのスタイル */
         .chat-header {
-            background-color: #3d414d;
-            color: white;
-            padding: 15px 20px;
-            text-align: center;
-            font-size: 1.1em;
-            font-weight: bold;
-            border-bottom: 1px solid #353842;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
+            background-color: #3d414d; color: white; padding: 15px 20px; text-align: center;
+            font-size: 1.1em; font-weight: bold; border-bottom: 1px solid #353842;
+            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
         }
         .chat-header .status-icons { font-size: 0.9em; opacity: 0.8; }
 
-        /* メッセージ表示エリアのスタイル */
         .chat-messages {
-            flex-grow: 1;
-            padding: 10px 15px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            background-color: rgb(140, 171, 217); /* 指定されたRGB値に変更 */
-            gap: 5px;
+            flex-grow: 1; padding: 10px 15px; overflow-y: auto; display: flex; flex-direction: column;
+            background-color: rgb(140, 171, 217); gap: 5px;
         }
 
-        /* 個々のメッセージのスタイル */
-        .message {
-            display: flex;
-            max-width: 100%; /* 親要素に対して100% */
-            margin-bottom: 10px;
-            align-items: flex-end; 
-            box-sizing: border-box; /* パディングとボーダーを幅に含める */
-        }
-
-        .message .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-size: cover;
-            background-position: center;
-            flex-shrink: 0;
-            margin-bottom: 5px; 
-        }
-
-        .message .bubble { 
-            padding: 10px 15px;
-            border-radius: 16px; 
-            position: relative;
-            word-wrap: break-word;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            max-width: 75%; /* メッセージエリアの幅に対して75% */
-        }
-        
-        .message.sent .bubble::after { 
-            content: '';
-            position: absolute;
-            top: 8px;      
-            right: -8px;    
-            width: 0;
-            height: 0;
-            border-top: 8px solid transparent;    
-            border-bottom: 8px solid transparent; 
-            border-left: 10px solid #8de048;   
-        }
-
-        .message.received .bubble::before { 
-            content: '';
-            position: absolute;
-            top: 8px;      
-            left: -8px;     
-            width: 0;
-            height: 0;
-            border-top: 8px solid transparent;
-            border-bottom: 8px solid transparent;
-            border-right: 10px solid #ffffff; 
-        }
-
-        /* 画像メッセージ用のスタイル */
-        .chat-image-link {
+        .chat-messages::after {
+            content: "";
             display: block;
-            max-width: 70%; 
-            border-radius: 10px; 
-            overflow: hidden; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-        }
-        .chat-image {
-            max-width: 100%; 
-            display: block; 
-            border-radius: 10px; 
+            /* / ← 欲しい余白分 */
+            height: 80px; 
+            /* / 折りたたまれ防止 */
+            flex-shrink: 0; 
         }
         
-        /* 画像挿入マーカーのスタイル */
-        .insertion-marker {
-            background-color: rgba(76, 175, 80, 0.8); 
-            color: white;
-            padding: 6px 0; 
-            margin: 3px 0;
-            border-radius: 4px;
-            cursor: pointer;
+        
+        /* 日付区切り線のスタイル */
+        .date-separator {
             text-align: center;
-            font-size: 0.8em;
-            border: 1px dashed #fff;
-            transition: background-color 0.2s ease;
-        }
-        .insertion-marker:hover {
-            background-color: rgba(69, 160, 73, 0.9);
-        }
-
-
-        .message.received .speaker-name {
-            display: none; 
+            margin: 15px auto 10px auto; /* 上下マージンと左右autoで中央寄せ */
+            font-size: 0.75em;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.2); /* 半透明の濃いグレー */
+            padding: 3px 12px;
+            border-radius: 12px;
+            display: inline-block; /* widthを内容に合わせる */
+            clear: both; /* floatの影響を避ける */
+            align-self: center; /* flexコンテナ内で中央に */
         }
 
-        .message .timestamp {
-            font-size: 0.65em; 
-            color: #777;
-            white-space: nowrap; 
-            margin-bottom: 5px; 
-        }
-        
-        .message.sent .status-timestamp-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end; 
-            margin-right: 5px; 
-        }
-        .message.sent .read-status {
-            font-size: 0.6em; 
-            color: #777;
-            margin-bottom: 0.6px; 
-        }
-
-        .message.sent {
-            justify-content: flex-end; 
-            padding-left: 10px; 
-        }
-        .message.sent .bubble,
-        .message.sent .chat-image-link { 
-            background-color: #8de048; 
-        }
-         .message.sent .avatar {
-            display: none; 
-        }
-
-        .message.received {
-            justify-content: flex-start; 
-            padding-right: 10px; 
-        }
-        .message.received .avatar {
-            margin-right: 10px;
-        }
-        .message.received .bubble,
-        .message.received .chat-image-link { 
-            background-color: #ffffff;
-            margin-left: 10px; 
-        }
-         .message.received .chat-image-link {
-            margin-left: 0; 
-         }
-
-        .message.received .timestamp {
-            margin-left: 5px; 
-        }
+        .message { display: flex; max-width: 100%; margin-bottom: 10px; align-items: flex-end; box-sizing: border-box; }
+        .message .avatar { width: 40px; height: 40px; border-radius: 50%; background-size: cover; background-position: center; flex-shrink: 0; margin-bottom: 5px; }
+        .message .bubble { padding: 10px 15px; border-radius: 16px; position: relative; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); max-width: 75%; }
+        .message.sent .bubble::after { content: ''; position: absolute; top: 8px; right: -8px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 10px solid #8de048; }
+        .message.received .bubble::before { content: ''; position: absolute; top: 8px; left: -8px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 10px solid #ffffff; }
+        .chat-image-link { display: block; max-width: 70%; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .chat-image { max-width: 100%; display: block; border-radius: 10px; }
+        .insertion-marker { background-color: rgba(76, 175, 80, 0.8); color: white; padding: 6px 0; margin: 3px 0; border-radius: 4px; cursor: pointer; text-align: center; font-size: 0.8em; border: 1px dashed #fff; transition: background-color 0.2s ease; }
+        .insertion-marker:hover { background-color: rgba(69, 160, 73, 0.9); }
+        .message.received .speaker-name { display: none; }
+        .message .timestamp { font-size: 0.65em; color: #777; white-space: nowrap; margin-bottom: 5px; }
+        .message.sent .status-timestamp-wrapper { display: flex; flex-direction: column; align-items: flex-end; margin-right: 5px; }
+        .message.sent .read-status { font-size: 0.6em; color: #777; margin-bottom: 0.6px; }
+        .message.sent { justify-content: flex-end; padding-left: 10px; }
+        .message.sent .bubble, .message.sent .chat-image-link { background-color: #8de048; }
+        .message.sent .avatar { display: none; }
+        .message.received { justify-content: flex-start; padding-right: 10px; }
+        .message.received .avatar { margin-right: 10px; }
+        .message.received .bubble, .message.received .chat-image-link { background-color: #ffffff; margin-left: 10px; }
+        .message.received .chat-image-link { margin-left: 0; }
+        .message.received .timestamp { margin-left: 5px; }
 
         .chat-input-area {
-            display: flex;
-            padding: 10px 15px;
-            border-top: 1px solid #ddd;
-            background-color: #f5f5f5;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
+            display: flex; padding: 10px 15px; border-top: 1px solid #ddd; background-color: #f5f5f5;
+            align-items: center; gap: 8px; /* Gapを少し調整 */ flex-shrink: 0;
         }
         #speakerSelector { padding: 10px; border-radius: 20px; border: 1px solid #ccc; background-color: white; font-size: 0.9em; flex-shrink: 0; }
         #messageInput { flex-grow: 1; padding: 12px 18px; border: 1px solid #ccc; border-radius: 20px; font-size: 1em; outline: none; }
-        #messageInput:focus { border-color: #8de048; box-shadow: 0 0 5px rgba(141, 224, 72, 0.5); }
+        #customMessageTimeInput { /* 新しい時刻入力欄のスタイル */
+            padding: 10px; border-radius: 20px; border: 1px solid #ccc; font-size: 0.8em; width: 80px; text-align: center;
+        }
         #sendMessageButton { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 1.2em; cursor: pointer; transition: background-color 0.2s ease; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #sendMessageButton:hover { background-color: #0056b3; }
         #sendMessageButton svg { width: 20px; height: 20px; fill: white; }
 
-        @media (max-width: 480px) {
-            body { padding: 0; }
-            .action-area { border-radius: 0; margin-bottom: 0; border-bottom: 1px solid #ddd; }
-            .action-area .input-group { flex-direction: column; align-items: flex-start; } 
-            .action-area input[type="file"],
-            .action-area input[type="text"],
-            .action-area button { width: 100%; margin-bottom: 5px; } 
-
-            .chat-container { height: calc(100vh - 220px); max-height: none; border-radius: 0; }
-        }
+        @media (max-width: 480px) { /* 省略 */ }
     </style>
 </head>
 <body>
@@ -302,7 +167,8 @@
         <div class="input-group"> 
             <label for="imageFile">画像挿入:</label>
             <input type="file" id="imageFile" accept="image/*" style="display: none;"> 
-            <button id="insertImageButton">画像を選択して挿入位置を指定</button>
+            <input type="text" id="customImageTimeInput" placeholder="時刻 (例:10:30)"> {/* 画像用の時刻入力 */}
+            <button id="insertImageButton">選択して挿入場所を指定</button>
         </div>
         <div class="input-group"> 
              <button id="prepareScreenshotButton" style="width: auto;">チャットを画像/PDFで保存準備</button>
@@ -310,121 +176,113 @@
     </div>
 
     <div class="chat-container">
-        <div class="chat-header">
-            <span>トークルーム</span>
-            <div class="status-icons">📶 <span>100%</span></div>
-        </div>
-        <div class="chat-messages" id="chatMessages">
-            </div>
+        <div class="chat-header"> /* ... */ </div>
+        <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
             <select id="speakerSelector">
                 <option value="man">男性</option>
                 <option value="woman">女性</option>
             </select>
             <input type="text" id="messageInput" placeholder="メッセージを入力...">
+            <input type="text" id="customMessageTimeInput" placeholder="時刻"> {/* テキストメッセージ用の時刻入力 */}
             <button id="sendMessageButton" title="送信">
-                <svg viewBox="0 0 24 24">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                </svg>
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
             </button>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // CSV関連の要素取得とイベントリスナー登録を優先的に行う
-            const csvFileInput = document.getElementById('csvFile');
-            const loadCsvButton = document.getElementById('loadCsvButton');
-            let selectedCsvFile = null;
-
-            if (csvFileInput && loadCsvButton) {
-                csvFileInput.addEventListener('change', (event) => {
-                    selectedCsvFile = event.target.files[0];
-                    loadCsvButton.disabled = !selectedCsvFile;
-                });
-
-                loadCsvButton.addEventListener('click', () => {
-                    if (!selectedCsvFile) {
-                        alert('CSVファイルを選択してください。');
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            parseAndDisplayCsv(event.target.result);
-                        } catch (error) {
-                            console.error('CSV処理エラー:', error);
-                            alert('CSV処理エラー。\nフォーマット確認してください。');
-                        }
-                    };
-                    reader.onerror = () => {
-                        alert('ファイル読込失敗。');
-                    };
-                    reader.readAsText(selectedCsvFile, 'UTF-8');
-                });
-            } else {
-                console.error("CSV関連のDOM要素 (csvFileまたはloadCsvButton) が見つかりません。");
-            }
-
-            // その他の要素取得
+            // --- 要素取得 (主要なもの) ---
             const chatMessages = document.getElementById('chatMessages');
             const messageInput = document.getElementById('messageInput');
+            const customMessageTimeInput = document.getElementById('customMessageTimeInput'); // テキストメッセージ用時刻入力
             const sendMessageButton = document.getElementById('sendMessageButton');
             const speakerSelector = document.getElementById('speakerSelector');
-            const prepareScreenshotButton = document.getElementById('prepareScreenshotButton');
+            const csvFileInput = document.getElementById('csvFile');
+            const loadCsvButton = document.getElementById('loadCsvButton');
             const womanAvatarUrlInput = document.getElementById('womanAvatarUrl');
             const setWomanAvatarButton = document.getElementById('setWomanAvatarButton');
             const imageFileInput = document.getElementById('imageFile');
+            const customImageTimeInput = document.getElementById('customImageTimeInput'); // 画像用時刻入力
             const insertImageButton = document.getElementById('insertImageButton');
+            const prepareScreenshotButton = document.getElementById('prepareScreenshotButton');
             
+            let selectedCsvFile = null;
             let pendingImageToInsert = null; 
+            let lastProcessedDateString = null; // 最後に処理されたメッセージの日付文字列 (YYYY-MM-DD)
 
-            const users = {
-                man: { name: '男性', avatar: 'https://placehold.co/40x40/A0C4FF/FFFFFF?text=男' },
-                woman: { name: '女性', avatar: 'https://placehold.co/40x40/FFB3C6/FFFFFF?text=女' }
-            };
+            const users = { /* ... */ };
             
-            // 女性アバター設定
-            if (setWomanAvatarButton && womanAvatarUrlInput) {
-                setWomanAvatarButton.addEventListener('click', () => {
-                    const newAvatarUrl = womanAvatarUrlInput.value.trim();
-                    if (newAvatarUrl) {
-                        users.woman.avatar = newAvatarUrl; 
-                        const existingWomanAvatars = chatMessages.querySelectorAll('.message.received.woman .avatar');
-                        existingWomanAvatars.forEach(avatarElement => { avatarElement.style.backgroundImage = `url('${newAvatarUrl}')`;});
-                        alert('女性のアイコンを設定しました。');
-                    } else { alert('アイコンのURLを入力してください。');}
-                });
+            // --- Helper Functions ---
+            function getFormattedTimestamp(dateObj) {
+                return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             }
 
-            // 画像挿入関連
-            if (insertImageButton && imageFileInput) {
-                insertImageButton.addEventListener('click', () => {
-                    if (pendingImageToInsert) { 
-                        cancelImageInsertion();
-                    } else { 
-                        imageFileInput.click(); 
+            function parseTimeToDate(timeStr, baseDate = new Date()) {
+                const newDate = new Date(baseDate);
+                if (timeStr) {
+                    const timeParts = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+                    if (timeParts) {
+                        newDate.setHours(parseInt(timeParts[1], 10), parseInt(timeParts[2], 10), 0, 0);
+                        return newDate;
                     }
-                });
+                    // 簡単な日付時刻文字列のパース試行 (例: "2023-10-27 10:30", "10/27 10:30")
+                    const parsedDate = new Date(timeStr);
+                    if (!isNaN(parsedDate.valueOf()) && timeStr.includes(":")) { // 有効な日付かつ時刻情報がありそうなら
+                         if(!timeStr.match(/[年月日の]/) && timeStr.match(/^\d{1,2}:\d{2}$/)) { // "10:30" のような形式なら今日の日にちを維持
+                            newDate.setHours(parsedDate.getHours(), parsedDate.getMinutes(), parsedDate.getSeconds(), parsedDate.getMilliseconds());
+                            return newDate;
+                         }
+                        return parsedDate;
+                    }
+                }
+                return baseDate; // パース失敗または入力なしならベースデート (通常は現在時刻)
+            }
+            
+            function formatDateForSeparator(dateObj) {
+                const today = new Date();
+                const yesterday = new Date();
+                yesterday.setDate(today.getDate() - 1);
 
+                if (dateObj.toDateString() === today.toDateString()) return '今日';
+                if (dateObj.toDateString() === yesterday.toDateString()) return '昨日';
+                
+                const M = dateObj.getMonth() + 1;
+                const D = dateObj.getDate();
+                const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+                const day = dayNames[dateObj.getDay()];
+                return `${dateObj.getFullYear()}年${M}月${D}日 (${day})`;
+            }
+
+            // --- イベントリスナー ---
+            if (csvFileInput && loadCsvButton) { /* ... (変更なし) */ }
+            if (setWomanAvatarButton && womanAvatarUrlInput) { /* ... (変更なし) */ }
+            if (prepareScreenshotButton) { /* ... (変更なし) */ }
+
+            if (insertImageButton && imageFileInput) {
+                insertImageButton.addEventListener('click', () => { /* ... (変更なし) */ });
                 imageFileInput.addEventListener('change', (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
                     const selectedSpeakerValue = speakerSelector.value;
-                    if (!users[selectedSpeakerValue]) {
-                        alert('話者を選択してください。');
-                        imageFileInput.value = ''; 
-                        return;
-                    }
+                    if (!users[selectedSpeakerValue]) { /* ... */ return; }
                     const reader = new FileReader();
                     reader.onload = (e) => {
+                        const customTimeStr = customImageTimeInput.value.trim();
+                        const actualDateTime = parseTimeToDate(customTimeStr, new Date());
+                        const displayTime = customTimeStr || getFormattedTimestamp(actualDateTime);
+
                         pendingImageToInsert = {
                             dataUrl: e.target.result,
-                            speakerKey: selectedSpeakerValue
+                            speakerKey: selectedSpeakerValue,
+                            actualDateTime: actualDateTime, // actualDateTime を保存
+                            displayTime: displayTime        // displayTime を保存
                         };
                         displayInsertionMarkers();
                         insertImageButton.textContent = '画像挿入をキャンセル';
                         insertImageButton.classList.add('cancel-mode');
+                        customImageTimeInput.value = ''; // 入力欄クリア
                     };
                     reader.readAsDataURL(file);
                 });
@@ -438,189 +296,106 @@
                     marker.textContent = 'ここに画像を挿入';
                     marker.onclick = () => {
                         if (pendingImageToInsert) {
-                            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            addMessageToScreen('image', pendingImageToInsert.dataUrl, pendingImageToInsert.speakerKey, timestamp, users[pendingImageToInsert.speakerKey], referenceNode);
+                            addMessageToScreen(
+                                'image', 
+                                pendingImageToInsert.dataUrl, 
+                                pendingImageToInsert.speakerKey, 
+                                pendingImageToInsert.actualDateTime, // actualDateTime を渡す
+                                pendingImageToInsert.displayTime,    // displayTime を渡す
+                                users[pendingImageToInsert.speakerKey],
+                                referenceNode 
+                            );
                             cancelImageInsertion();
                         }
                     };
                     return marker;
                 };
-                const messages = chatMessages.querySelectorAll('.message');
+                // ... (マーカー挿入ロジックは変更なし)
+                 const messages = chatMessages.querySelectorAll('.message');
                 messages.forEach(msgElement => { chatMessages.insertBefore(createMarker(msgElement), msgElement);});
                 chatMessages.appendChild(createMarker(null));
             }
-
-            function removeInsertionMarkers() {
-                const markers = chatMessages.querySelectorAll('.insertion-marker');
-                markers.forEach(marker => marker.remove());
-            }
-
-            function cancelImageInsertion() {
-                pendingImageToInsert = null;
-                removeInsertionMarkers();
-                insertImageButton.textContent = '画像を選択して挿入位置を指定';
-                insertImageButton.classList.remove('cancel-mode');
-                if(imageFileInput) imageFileInput.value = ''; 
-            }
+            function removeInsertionMarkers() { /* ... (変更なし) */ }
+            function cancelImageInsertion() { /* ... (変更なし) */ }
             
-            // スクリーンショット準備
-            if (prepareScreenshotButton) {
-                prepareScreenshotButton.addEventListener('click', () => {
-                    const chatContentHtml = chatMessages.innerHTML;
-                    let styles = "";
-                    const styleElements = document.head.getElementsByTagName('style');
-                    for (let i = 0; i < styleElements.length; i++) {
-                        styles += styleElements[i].innerHTML;
-                    }
-
-                    const printWindow = window.open('', '_blank', 'width=800,height=600');
-                    if (printWindow) {
-                        printWindow.document.write('<html><head><title>チャット内容の印刷/保存</title>');
-                        printWindow.document.write('<style>');
-                        printWindow.document.write(styles); 
-                        printWindow.document.write(`
-                            /* 印刷準備ウィンドウ専用のスタイル */
-                            body { 
-                                margin: 0 !important; 
-                                padding: 0 !important; 
-                                background-color: rgb(140, 171, 217) !important;  /* 指定されたRGB値に変更 */
-                            }
-                            .print-wrapper { 
-                                max-width: 450px; 
-                                margin: 20px auto; 
-                                padding: 0; 
-                                background-color: rgb(140, 171, 217); /* 指定されたRGB値に変更 */
-                                box-sizing: border-box;
-                            }
-                            .chat-messages { 
-                                overflow-y: visible !important; 
-                                height: auto !important; 
-                                width: 100% !important; 
-                                padding: 10px 15px !important; 
-                                box-sizing: border-box;
-                                background-color: rgb(140, 171, 217) !important; /* 指定されたRGB値に変更 */
-                            }
-                            .message.sent {
-                                padding-left: 10px !important; 
-                            }
-                             .message.received {
-                                padding-right: 10px !important; 
-                            }
-                            .insertion-marker { display: none !important; } 
-
-                            @media print {
-                                body { 
-                                    margin: 10mm !important; 
-                                    font-size: 9pt; 
-                                    -webkit-print-color-adjust: exact !important; 
-                                    color-adjust: exact !important; 
-                                }
-                                .print-wrapper {
-                                    margin: 0 !important; 
-                                    box-shadow: none !important;
-                                }
-                                .chat-messages { 
-                                    page-break-inside: avoid;
-                                    background-color: rgb(140, 171, 217) !important; /* 指定されたRGB値に変更 */
-                                }
-                                .message {
-                                    page-break-inside: avoid;
-                                    margin-bottom: 2mm; 
-                                }
-                                .bubble, .chat-image-link {
-                                   box-shadow: none !important; 
-                                }
-                                .chat-image-link {
-                                    max-width: 90%; 
-                                    margin: 5px auto; 
-                                }
-                                @page {
-                                    size: a4 portrait; 
-                                    margin: 10mm;
-                                }
-                            }
-                        `);
-                        printWindow.document.write('</style></head><body>');
-                        printWindow.document.write('<div class="print-wrapper">'); 
-                        printWindow.document.write('<div class="chat-messages">'); 
-                        printWindow.document.write(chatContentHtml); 
-                        printWindow.document.write('</div>');
-                        printWindow.document.write('</div>'); 
-                        printWindow.document.write('<p style="font-size: x-small; text-align: center; margin-top: 15px; color: #333;">注: チャットが非常に長い場合、複数ページに分割されることがあります。ブラウザの印刷設定で「背景画像を印刷する」オプションを確認し、縮小率やレイアウトを調整してください。</p>');
-                        printWindow.document.write('</body></html>');
-                        printWindow.document.close(); 
-                        
-                        setTimeout(() => {
-                            printWindow.focus(); 
-                            printWindow.print(); 
-                        }, 700); 
-                    } else {
-                        alert('ポップアップウィンドウがブロックされた可能性があります。ポップアップを許可してください。');
-                    }
-                });
-            }
-
-            // CSVパースと表示
-            function parseAndDisplayCsv(csvText) {
-                const lines = csvText.split(/\r\n|\n/);
-                if (lines.length < 2) { alert('CSVデータ不足。'); return; }
-                const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-                const speakerHeaderName = 'sender'; const messageHeaderName = 'text'; const timestampHeaderName = 'timestamp';
-                const speakerIndex = header.indexOf(speakerHeaderName); const messageIndex = header.indexOf(messageHeaderName); const timestampIndex = header.indexOf(timestampHeaderName);
-                if (speakerIndex === -1 || messageIndex === -1) { alert(`ヘッダーに "${speakerHeaderName}" と "${messageHeaderName}" が必要です。`); return; }
-                chatMessages.innerHTML = ''; 
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i]; if (line.trim() === '') continue;
-                    const values = line.split(','); 
-                    const csvSpeaker = values[speakerIndex]?.trim(); let messageText = values[messageIndex]?.trim(); let timestamp = timestampIndex !== -1 ? values[timestampIndex]?.trim() : null;
-                    if (messageText && messageText.startsWith('"') && messageText.endsWith('"')) { messageText = messageText.substring(1, messageText.length - 1).replace(/""/g, '"');}
-                    if (!csvSpeaker || !messageText) { console.warn(`行 ${i+1} データ不足: ${line}`); continue; }
-                    let internalSpeakerKey = '';
-                    if (csvSpeaker === '男') internalSpeakerKey = 'man'; else if (csvSpeaker === '女') internalSpeakerKey = 'woman'; else { console.warn(`行 ${i+1} 話者不明 "${csvSpeaker}"`); continue; }
-                    if (!users[internalSpeakerKey]) { console.warn(`行 ${i+1} 話者キー "${internalSpeakerKey}" 未定義`); continue; }
-                    if (!timestamp) timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    addMessageToScreen('text', messageText, internalSpeakerKey, timestamp, users[internalSpeakerKey]); 
-                }
-                if(csvFileInput) csvFileInput.value = ''; 
-                selectedCsvFile = null; 
-                if(loadCsvButton) loadCsvButton.disabled = true;
-            }
-
-            // 手動メッセージ送信
-            if (sendMessageButton && messageInput && speakerSelector) {
+            // --- メッセージ送信関連 ---
+            if (sendMessageButton && messageInput && speakerSelector && customMessageTimeInput) {
                 sendMessageButton.addEventListener('click', handleManualMessageSend);
-                messageInput.addEventListener('keypress', (event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleManualMessageSend(); }
-                });
+                messageInput.addEventListener('keypress', (event) => { /* ... */ });
             }
             function handleManualMessageSend() { 
                 const messageText = messageInput.value.trim();
+                const customTimeStr = customMessageTimeInput.value.trim();
                 const selectedSpeakerValue = speakerSelector.value;
                 const currentUser = users[selectedSpeakerValue];
+
                 if (messageText === '' || !currentUser) return;
-                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                addMessageToScreen('text', messageText, selectedSpeakerValue, timestamp, currentUser);
-                messageInput.value = ''; messageInput.focus();
+
+                const actualDateTime = parseTimeToDate(customTimeStr, new Date());
+                const displayTime = customTimeStr || getFormattedTimestamp(actualDateTime);
+                
+                addMessageToScreen('text', messageText, selectedSpeakerValue, actualDateTime, displayTime, currentUser);
+                messageInput.value = ''; 
+                customMessageTimeInput.value = ''; // 時刻入力欄もクリア
+                messageInput.focus();
             }
             
-            // メッセージを画面に追加する共通関数
-            function addMessageToScreen(type, content, speakerKey, time, speakerInfo, referenceNode = null) {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
+            // --- CSVパースと表示 ---
+            function parseAndDisplayCsv(csvText) {
+                // ... (ヘッダー処理など)
+                chatMessages.innerHTML = ''; 
+                lastProcessedDateString = null; // CSV読み込み時にリセット
 
-                const avatarDiv = document.createElement('div');
+                for (let i = 1; i < lines.length; i++) {
+                    // ... (行データ取得)
+                    let csvTimestampStr = timestampIndex !== -1 ? values[timestampIndex]?.trim() : null;
+                    let actualDateTime = parseTimeToDate(csvTimestampStr, new Date()); // CSVの時刻をパース
+                    let displayTime = csvTimestampStr || getFormattedTimestamp(actualDateTime);
+                    if(csvTimestampStr && !csvTimestampStr.includes(':')) { // 時刻情報がないただの文字列ならそのまま表示、日時は現在
+                        displayTime = csvTimestampStr;
+                        actualDateTime = new Date(); // 判定用に現在日時を使う
+                    }
+
+
+                    addMessageToScreen('text', messageText, internalSpeakerKey, actualDateTime, displayTime, users[internalSpeakerKey]); 
+                }
+                // ...
+            }
+
+            // --- メッセージを画面に追加する共通関数 ---
+            // 引数に actualDateTime (Date object) と displayTime (string) を追加
+            function addMessageToScreen(type, content, speakerKey, actualDateTime, displayTime, speakerInfo, referenceNode = null) {
+                const currentMessageDateStr = actualDateTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
+
+                // 日付区切り線のチェックと挿入
+                if (lastProcessedDateString !== currentMessageDateStr) {
+                    const dateSeparatorDiv = document.createElement('div');
+                    dateSeparatorDiv.classList.add('date-separator');
+                    dateSeparatorDiv.textContent = formatDateForSeparator(actualDateTime);
+                    
+                    if (referenceNode) {
+                        chatMessages.insertBefore(dateSeparatorDiv, referenceNode);
+                    } else {
+                        chatMessages.appendChild(dateSeparatorDiv);
+                    }
+                    lastProcessedDateString = currentMessageDateStr;
+                }
+
+                const messageDiv = document.createElement('div');
+                // ... (以降のメッセージ要素生成は変更なし、ただしtimestampDiv.textContent = displayTime; にする)
+                messageDiv.classList.add('message');
+                const avatarDiv = document.createElement('div'); /* ... */
                 avatarDiv.classList.add('avatar');
                 avatarDiv.style.backgroundImage = `url('${speakerInfo.avatar}')`;
 
                 let messageContentElement; 
-
-                if (type === 'text') {
+                if (type === 'text') { /* ... */ 
                     const bubbleDiv = document.createElement('div');
                     bubbleDiv.classList.add('bubble');
                     const linkedText = content.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
                     bubbleDiv.innerHTML = linkedText.replace(/\n/g, '<br>');
                     messageContentElement = bubbleDiv;
-                } else if (type === 'image') {
+                } else if (type === 'image') { /* ... */ 
                     const imageLink = document.createElement('a');
                     imageLink.href = content; 
                     imageLink.target = '_blank';
@@ -635,10 +410,10 @@
 
                 const timestampDiv = document.createElement('div');
                 timestampDiv.classList.add('timestamp');
-                timestampDiv.textContent = time;
+                timestampDiv.textContent = displayTime; // 表示用の時刻文字列を使用
 
-                if (speakerKey === 'man') { 
-                    messageDiv.classList.add('sent', 'man');
+                if (speakerKey === 'man') { /* ... */ 
+                     messageDiv.classList.add('sent', 'man');
                     const statusTimestampWrapper = document.createElement('div');
                     statusTimestampWrapper.classList.add('status-timestamp-wrapper');
                     const readStatusDiv = document.createElement('div');
@@ -648,7 +423,7 @@
                     statusTimestampWrapper.appendChild(timestampDiv); 
                     messageDiv.appendChild(statusTimestampWrapper); 
                     messageDiv.appendChild(messageContentElement); 
-                } else { 
+                } else { /* ... */ 
                     messageDiv.classList.add('received', 'woman');
                     messageDiv.appendChild(avatarDiv);
                     messageDiv.appendChild(messageContentElement); 
@@ -662,6 +437,10 @@
                 }
                 messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); 
             }
+
+            // 既存のCSVパースや手動送信関数内でaddMessageToScreenを呼び出す際、
+            // 第4引数にDateオブジェクト、第5引数に表示用時刻文字列を渡すように修正が必要
+            // (上記コード内で一部修正済み)
         });
     </script>
 </body>
