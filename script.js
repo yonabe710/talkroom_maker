@@ -431,7 +431,30 @@ document.addEventListener("DOMContentLoaded", () => {
               audio: false,
             });
           } catch (err) {
-            alert("画面録画の許可が得られませんでした。");
+            console.error("getDisplayMedia エラー:", err);
+            let errorMessage = "画面録画の許可が得られませんでした。\n\n";
+            errorMessage += `プロトコル: ${location.protocol}\n`;
+            errorMessage += `ホスト: ${location.hostname}\n`;
+            errorMessage += `エラー名: ${err.name}\n`;
+            errorMessage += `エラー詳細: ${err.message}\n\n`;
+            
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+              errorMessage += "⚠️ HTTPS接続が必要です。\n";
+              errorMessage += "解決方法:\n";
+              errorMessage += "1. ローカルサーバーで開く (npm start)\n";
+              errorMessage += "2. HTTPS対応サーバーを使用\n";
+            } else if (err.name === 'NotAllowedError') {
+              errorMessage += "⚠️ ユーザーが画面共有を拒否しました。\n";
+              errorMessage += "解決方法:\n";
+              errorMessage += "1. Braveの🛡️アイコンからShieldsを無効化\n";
+              errorMessage += "2. サイト設定で画面共有を許可\n";
+              errorMessage += "3. 録画ボタンをもう一度クリック\n";
+            } else if (err.name === 'NotSupportedError') {
+              errorMessage += "⚠️ ブラウザが画面録画に対応していません。\n";
+              errorMessage += "Chrome、Firefox、Edgeをお試しください。\n";
+            }
+            
+            alert(errorMessage);
             recWinGlobal.close();
             return;
           }
