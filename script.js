@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
     const chatDisplay = document.getElementById("chatDisplay");
-    const chatLeft = chatDisplay.querySelector('.chat-left'); // スクロール対象を .chat-left に
     const chatMessages = document.getElementById("chatMessages");
     const chatBlankSpace = document.getElementById("chatBlankSpace");
     const chatTitleText = document.getElementById("chatTitleText");
@@ -20,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const titleFontSizeInput = document.getElementById("titleFontSize");
     const titleFontSizeValue = document.getElementById("titleFontSizeValue");
   
+    // 録画関連の状態
     let mediaRecorder = null;
     let recordedChunks = [];
     let isRecording = false;
@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentScrollSpeed = parseFloat(scrollSpeedInput.value);
     let recWinGlobal = null;
   
+    // UI設定値
     let chatTitle = chatTitleInput.value;
     let titleBlankPercent = parseInt(titleBlankPercentInput.value, 10);
     let titleHorizontalPosition = parseInt(titleHorizontalPositionInput.value, 10);
@@ -37,13 +38,45 @@ document.addEventListener("DOMContentLoaded", () => {
     titleFontSizeValue.textContent = titleFontSize + "em";
     chatTitleText.style.fontSize = titleFontSize + "em";
   
-    const conversationEditor =
-      document.getElementById("conversationEditor");
+    // 会話エディタ関連
+    const conversationEditor = document.getElementById("conversationEditor");
     const csvExportButton = document.getElementById("csvExportButton");
     const csvImportButton = document.getElementById("csvImportButton");
     const csvImportInput = document.getElementById("csvImportInput");
     let conversationRows = [];
     let draggedItemIndex = null;
+
+    // ユーティリティ関数
+    function createRecordingErrorMessage(err) {
+      let errorMessage = "画面録画の許可が得られませんでした。\n\n";
+      errorMessage += `プロトコル: ${location.protocol}\n`;
+      errorMessage += `ホスト: ${location.hostname}\n`;
+      errorMessage += `エラー名: ${err.name}\n`;
+      errorMessage += `エラー詳細: ${err.message}\n\n`;
+      
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        errorMessage += "⚠️ HTTPS接続が必要です。\n";
+        errorMessage += "解決方法:\n";
+        errorMessage += "1. ローカルサーバーで開く (npm start)\n";
+        errorMessage += "2. HTTPS対応サーバーを使用\n";
+      } else if (err.name === 'NotAllowedError') {
+        errorMessage += "⚠️ ユーザーが画面共有を拒否しました。\n";
+        errorMessage += "解決方法:\n";
+        errorMessage += "1. Braveの🛡️アイコンからShieldsを無効化\n";
+        errorMessage += "2. サイト設定で画面共有を許可\n";
+        errorMessage += "3. 録画ボタンをもう一度クリック\n";
+      } else if (err.name === 'AbortError') {
+        errorMessage += "⚠️ 画面共有がキャンセルされました。\n";
+        errorMessage += "解決方法:\n";
+        errorMessage += "1. 少し待ってから再度お試しください\n";
+        errorMessage += "2. ページを再読み込みしてから録画してください\n";
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage += "⚠️ ブラウザが画面録画に対応していません。\n";
+        errorMessage += "Chrome、Firefox、Edgeをお試しください。\n";
+      }
+      
+      return errorMessage;
+    }
 
     function parseCsvLine(line) {
       const result = [];
@@ -373,6 +406,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 録画機能関連 ---
     async function startScreenRecording() {
       try {
+        // 既存の録画があれば停止
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        
+        // 既存のウィンドウがあれば閉じる
+        if (recWinGlobal && !recWinGlobal.closed) {
+          recWinGlobal.close();
+        }
+
         const recWinWidth = chatDisplay.offsetWidth;
         const recWinHeight = 1040;
         recWinGlobal = window.open(
@@ -382,6 +425,8 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         if (!recWinGlobal) {
           alert("録画用ウィンドウのポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。");
+          // ストリームを停止
+          stream.getTracks().forEach(track => track.stop());
           return;
         }
         recWinGlobal.document.title = "録画対象";
@@ -400,9 +445,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 body { margin: 0; }
               </style>`;
   
-        recWinGlobal.document.write(
-          `<html><head><title>録画対象</title>${styles}</head><body>${chatDisplay.outerHTML}</body></html>`
-        );
+        const htmlContent = `<html><head><title>録画対象</title>${styles}</head><body>${chatDisplay.outerHTML}</body></html>`;
+        recWinGlobal.document.open();
+        recWinGlobal.document.write(htmlContent);
         recWinGlobal.document.close();
   
         recWinGlobal.onload = async () => {
@@ -423,39 +468,21 @@ document.addEventListener("DOMContentLoaded", () => {
           alert(
             "録画用の新しいウィンドウが開きました。\n画面共有の選択ダイアログでこのウィンドウを選択してください。"
           );
-  
+
           let stream;
           try {
             stream = await navigator.mediaDevices.getDisplayMedia({
-              video: { frameRate: 30, cursor: "never" },
+              video: { 
+                frameRate: 30, 
+                cursor: "never",
+                displaySurface: "window"
+              },
               audio: false,
             });
           } catch (err) {
             console.error("getDisplayMedia エラー:", err);
-            let errorMessage = "画面録画の許可が得られませんでした。\n\n";
-            errorMessage += `プロトコル: ${location.protocol}\n`;
-            errorMessage += `ホスト: ${location.hostname}\n`;
-            errorMessage += `エラー名: ${err.name}\n`;
-            errorMessage += `エラー詳細: ${err.message}\n\n`;
-            
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-              errorMessage += "⚠️ HTTPS接続が必要です。\n";
-              errorMessage += "解決方法:\n";
-              errorMessage += "1. ローカルサーバーで開く (npm start)\n";
-              errorMessage += "2. HTTPS対応サーバーを使用\n";
-            } else if (err.name === 'NotAllowedError') {
-              errorMessage += "⚠️ ユーザーが画面共有を拒否しました。\n";
-              errorMessage += "解決方法:\n";
-              errorMessage += "1. Braveの🛡️アイコンからShieldsを無効化\n";
-              errorMessage += "2. サイト設定で画面共有を許可\n";
-              errorMessage += "3. 録画ボタンをもう一度クリック\n";
-            } else if (err.name === 'NotSupportedError') {
-              errorMessage += "⚠️ ブラウザが画面録画に対応していません。\n";
-              errorMessage += "Chrome、Firefox、Edgeをお試しください。\n";
-            }
-            
-            alert(errorMessage);
-            recWinGlobal.close();
+            alert(createRecordingErrorMessage(err));
+            if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
             return;
           }
           
@@ -464,6 +491,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
             return;
           }
+
+  
   
           mediaRecorder = new MediaRecorder(stream, {
             mimeType: "video/webm;codecs=vp9",
