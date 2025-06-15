@@ -4,559 +4,62 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LINE風チャットレコーダー</title>
+    <meta name="description" content="LINE風チャットの録画ツール" />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap"
       rel="stylesheet"
+      preconnect
     />
-
-    <style>
-      /* 全体のスタイル */
-      body {
-        font-family: "Noto Sans JP", "Helvetica Neue", Arial,
-          "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-        margin: 0;
-        background-color: #f0f0f0;
-        min-height: 100vh;
-        padding: 20px;
-        box-sizing: border-box;
-      }
-
-      .container {
-        display: flex;
-        gap: 20px;
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      /* チャット表示エリア */
-      .chat-display {
-        width: 540px;
-        height: 1000px;
-        background: linear-gradient(to bottom, #a5c6e7 0%, #7faedc 100%);
-        border-radius: 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .chat-display.recording-mode {
-        box-shadow: none !important;
-        border-radius: 0 !important;
-      }
-
-      /* 左ブロック（タイトル / メッセージ） */
-      .chat-left {
-        flex: 1 1 0;
-        display: flex;
-        flex-direction: column;
-        min-height: 0; /* 子の overflow を効かせるため */
-      }
-
-      /* 右側の余白だけ欲しい場合 */
-      .tiktok-blank {
-        width: 50px;
-        flex: 0 0 50px;
-        height: auto; /* もう高さを固定しない */
-      }
-
-      .chat-blank-space {
-        width: 100%;
-        flex-shrink: 0;
-        display: block;
-      }
-      .chat-title-text {
-        font-size: 3em;
-        color: #222;
-        font-weight: bold;
-        text-align: center;
-        word-break: break-word;
-        line-height: 1.2;
-        padding: 0 20px;
-        max-width: 90%;
-        white-space: pre-line;
-        margin: 0 auto 32px auto;
-        display: block;
-        position: relative;
-      }
-
-      /* チャットメッセージエリア */
-      .chat-messages {
-        width: 490px;
-        flex: 1 1 0%;
-        min-height: 0;
-        padding: 0 0 30px 15px;
-        display: flex;
-        flex-direction: column;
-        background: transparent;
-        gap: 5px;
-        position: relative;
-        justify-content: flex-start;
-      }
-
-      .chat-messages::after {
-        content: "";
-        display: block;
-        height: 80px; 
-        flex-shrink: 0; 
-      }
-
-      .chat-header {
-        display: none;
-      }
-
-      /* メッセージのスタイル */
-      .message {
-        display: flex;
-        max-width: 100%;
-        margin-bottom: 9px;
-        align-items: flex-end;
-        position: relative;
-      }
-      .message:last-child {
-        margin-bottom: 0px;
-      }
-      
-      .date-separator {
-        text-align: center;
-        margin: 15px auto;
-        font-size: 13px;
-        color: white;
-        background-color: rgba(0, 0, 0, 0.2);
-        padding: 4px 15px;
-        border-radius: 15px;
-        display: inline-block;
-        align-self: center;
-      }
-
-
-      .message .avatar {
-        display: none !important;
-      }
-
-      /* 共通バブル */
-      .message .bubble {
-        position: relative;
-        word-break: break-word;
-        font-size: 18px;
-        line-height: 1.6;
-        max-width: 78%;
-        min-width: 40px;
-        padding: 10px 16px;
-        border-radius: 20px;
-        border: none;
-        box-shadow: none;
-        font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN",
-          "Hiragino Sans", Meiryo, sans-serif;
-        font-weight: 400;
-        letter-spacing: 0.01em;
-        margin: 0;
-        display: inline-block;
-      }
-
-      /* 送信（右側・緑） */
-      .message.sent {
-        justify-content: flex-end;
-        padding-left: 42px;
-        padding-right: 10px;
-      }
-      .message.sent .bubble {
-        background: #8de055;
-        color: #000;
-        border-radius: 20px;
-      }
-      .message.sent .bubble::after {
-        content: "";
-        position: absolute;
-        display: block;
-        width: 0;
-        height: 0;
-        right: -8px;
-        top: 0px;
-        border-left: 19px solid #8de055;
-        border-top: 4px solid transparent;
-        border-bottom: 9px solid transparent;
-        transform: rotate(-35deg);
-        -webkit-transform: rotate(-35deg);
-      }
-
-      /* 受信（左側・白） */
-      .message.received {
-        justify-content: flex-start;
-        padding-right: 42px;
-      }
-      .message.received .bubble {
-        background: #edf1ee;
-        color: #000;
-        border-radius: 20px;
-      }
-      .message.received .bubble::after {
-        content: "";
-        position: absolute;
-        display: block;
-        width: 0;
-        height: 0;
-        left: -6px;
-        top: 0px;
-        border-right: 13px solid #edf1ee;
-        border-top: 2px solid transparent;
-        border-bottom: 8px solid transparent;
-        transform: rotate(35deg);
-        -webkit-transform: rotate(35deg);
-      }
-      
-      /* 電話吹き出し用の特別スタイル */
-      .message.call-log .bubble {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 8px 15px;
-      }
-       .message.call-log .call-icon-wrapper {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background-color: rgba(0, 0, 0, 0.1); 
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .message.call-log .call-icon svg {
-        width: 20px;
-        height: 20px;
-        fill: #fff; 
-        transform: rotate(135deg); 
-      }
-      .message.call-log .call-info {
-        display: flex;
-        flex-direction: column;
-        text-align: left;
-      }
-      .message.call-log .call-type {
-        font-weight: bold;
-        font-size: 0.9em;
-      }
-      .message.call-log .call-duration {
-        font-size: 0.8em;
-      }
-      /* 電話吹き出しにしっぽは表示（通常の吹き出しと同様の挙動） */
-      .message.call-log.sent .bubble::after { display: block; }
-      .message.call-log.received .bubble::after { display: block; }
-
-
-      /* タイムスタンプ & 既読 */
-      .message .timestamp {
-        font-size: 15px;
-        color: #7a8fa6;
-        margin: 0 4px;
-        align-self: flex-end;
-        display: inline-block;
-      }
-      .message.sent .read-status {
-        font-size: 14px;
-        color: #7a8fa6;
-        margin-right: 3px;
-        margin-bottom: 1px;
-        align-self: flex-end;
-        display: inline-block;
-      }
-      .message.sent .meta {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        margin-left: 4px;
-      }
-      .message.received .meta {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        margin-right: 4px;
-      }
-
-      /* 入力エリア */
-      .input-area {
-        flex: 1;
-        background: #f7fafd;
-        border-radius: 18px;
-        padding: 28px 28px 20px 28px;
-        box-shadow: 0 2px 12px rgba(80, 180, 80, 0.08), 0 1.5px 0 #e0f2e9;
-        border: 1.5px solid #e0f2e9;
-        margin-bottom: 24px;
-      }
-
-      .input-group {
-        margin-bottom: 18px;
-      }
-
-      .input-group label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 700;
-        color: #3d414d;
-        letter-spacing: 0.01em;
-      }
-
-      .input-group input[type="text"],
-      .input-group textarea {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1.5px solid #bfe6c7;
-        border-radius: 12px;
-        font-size: 15px;
-        background: #fafdff;
-        transition: border 0.2s;
-        margin-bottom: 2px;
-      }
-
-      .input-group textarea {
-        height: 100px;
-        resize: vertical;
-      }
-
-      .section-title {
-        font-size: 1.15em;
-        font-weight: 700;
-        color: #00c300;
-        margin-bottom: 10px;
-        letter-spacing: 0.02em;
-      }
-
-      #conversationEditor {
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 2px 8px rgba(80, 180, 80, 0.07);
-        padding: 18px 18px 10px 18px;
-        margin-bottom: 18px;
-        border: 1.5px solid #e0f2e9;
-      }
-      #conversationEditor table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 7px;
-      }
-      #conversationEditor th {
-        font-weight: 700;
-        color: #3d414d;
-        background: none;
-        border: none;
-        padding-bottom: 4px;
-        text-align: left; 
-      }
-      #conversationEditor td {
-        background: #fafdff;
-        border-radius: 8px;
-        padding: 7px 6px;
-        border: none;
-        vertical-align: middle;
-        box-shadow: 0 1px 2px #e0f2e9;
-      }
-      #conversationEditor tr:hover td {
-        background: #eaffea;
-      }
-       #conversationEditor tr.dragging { 
-        opacity: 0.5;
-        background: #d0e0f0;
-      }
-      #conversationEditor tr.drag-over { 
-        border-top: 2px dashed #007bff;
-      }
-
-      #conversationEditor button,
-      #conversationEditor select {
-        border-radius: 8px;
-        border: 1.5px solid #bfe6c7;
-        background: #fafdff;
-        font-size: 1em;
-        padding: 5px 12px;
-        margin-right: 2px;
-        cursor: pointer;
-        transition: background 0.2s, border 0.2s;
-      }
-      #conversationEditor button:hover {
-        background: #e0f2e9;
-      }
-      #conversationEditor input[type="text"] { 
-        border-radius: 8px;
-        border: 1.5px solid #bfe6c7;
-        padding: 6px 10px;
-        font-size: 1em;
-        background: #fafdff;
-        width: calc(100% - 22px); 
-      }
-      #conversationEditor input[type="file"] {
-        border: none;
-        background: none;
-        font-size: 1em;
-      }
-      #conversationEditor img {
-        border-radius: 8px;
-        box-shadow: 0 1px 4px #e0f2e9;
-      }
-      #conversationEditor .add-btn-container { /* ボタンを横に並べるためのコンテナ */
-        display: flex;
-        gap: 10px;
-        margin-top: 8px;
-      }
-      #conversationEditor .add-btn {
-        font-size: 1.1em; 
-        color: #00c300;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        display: flex;
-        align-items: center;
-        padding: 0; 
-      }
-      #conversationEditor .add-btn:hover {
-        color: #009900;
-      }
-      #conversationEditor .del-btn { 
-        color: #aaa; 
-        background: transparent; 
-        border: 1px solid #ddd; 
-        border-radius: 50%;
-        width: 2em; 
-        height: 2em;
-        font-size: 1.1em; 
-        font-weight: bold;
-        cursor: pointer;
-        margin-left: 4px;
-        transition: background 0.2s, color 0.2s, border-color 0.2s;
-      }
-      #conversationEditor .del-btn:hover {
-        background: #f0f0f0;
-        color: #ff69b4;
-        border-color: #ccc;
-      }
-      .datetime-input-group {
-        display: flex;
-        flex-direction: column; 
-        gap: 3px; 
-      }
-      .datetime-input-group input[type="text"] {
-        width: 100% !important; 
-      }
-
-
-      .csv-btn {
-        background: #e0f2e9;
-        color: #00c300;
-        border: 1.5px solid #bfe6c7;
-        border-radius: 8px;
-        font-size: 1em;
-        padding: 7px 18px;
-        margin-right: 8px;
-        cursor: pointer;
-        font-weight: 700;
-        transition: background 0.2s, color 0.2s;
-      }
-      .csv-btn:hover {
-        background: #00c300;
-        color: #fff;
-      }
-
-      .hint {
-        font-size: 0.97em; 
-        color: #6a8e6a;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 0.4em;
-      }
-      .hint .icon {
-        font-size: 1.2em;
-        vertical-align: middle;
-      }
-
-      .settings-area {
-        margin-top: 20px;
-        padding: 20px;
-        background-color: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      .settings-group {
-        margin-bottom: 15px;
-      }
-
-      .settings-group label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-      }
-
-      .settings-group input[type="range"] {
-        width: 100%;
-      }
-
-      .button {
-        background-color: #007bff;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.2s;
-      }
-
-      .button:hover {
-        background-color: #0056b3;
-      }
-
-      .button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-      }
-    </style>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="container">
-      <div class="chat-display" id="chatDisplay"> 
-        <div class="chat-left">
-          <div id="chatBlankSpace" class="chat-blank-space"></div>
-          <div id="chatTitleText" class="chat-title-text"></div>
-          <div class="chat-messages" id="chatMessages"></div>
-        </div>
+      <main class="chat-display" id="chatDisplay" role="main" aria-label="チャット表示エリア">
+        <section class="chat-left" aria-label="チャットコンテンツ">
+          <div id="chatBlankSpace" class="chat-blank-space" aria-hidden="true"></div>
+          <header id="chatTitleText" class="chat-title-text" role="banner"></header>
+          <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="チャットメッセージ"></div>
+        </section>
+        <div class="tiktok-blank" aria-hidden="true"></div>
+      </main>
 
-        <div class="tiktok-blank"></div>
-      </div>
-
-      <div class="input-area">
-        <div style="font-size: 0.95em; color: #555; margin-bottom: 8px">
-          <span class="icon">📋</span>
+      <aside class="input-area" role="complementary" aria-label="設定とコントロール">
+        <div class="hint-message">
+          <span class="icon" aria-hidden="true">📋</span>
           <span class="hint">画像はコピー＆ペーストでも追加できます</span>
         </div>
-        <div id="conversationEditor"></div>
+        <div id="conversationEditor" aria-label="会話エディター"></div>
         <div class="input-group">
           <textarea
             id="conversationInput"
+            class="hidden-input"
             placeholder="sender,type,content,date,timestamp 例:\n男,text,こんにちは,2024/05/31,10:30\n電話,phone,46:29,2024/05/31,22:59"
-            style="display: none"
-          ></textarea> 
+            aria-label="会話データ入力"
+          ></textarea>
         </div>
 
-        <div class="input-group">
-          <button id="csvExportButton" type="button" class="csv-btn">
-            📤 CSVエクスポート
-          </button>
-          <input
-            type="file"
-            id="csvImportInput"
-            accept=".csv,text/csv"
-            style="display: none"
-          />
-          <button id="csvImportButton" type="button" class="csv-btn">
-            📥 CSVインポート
-          </button>
-        </div>
+        <fieldset class="csv-controls">
+          <legend>CSV操作</legend>
+          <div class="button-group">
+            <button id="csvExportButton" type="button" class="csv-btn" aria-describedby="export-help">
+              <span aria-hidden="true">📤</span> CSVエクスポート
+            </button>
+            <input
+              type="file"
+              id="csvImportInput"
+              accept=".csv,text/csv"
+              class="file-input"
+              aria-label="CSVファイルを選択"
+            />
+            <button id="csvImportButton" type="button" class="csv-btn" aria-describedby="import-help">
+              <span aria-hidden="true">📥</span> CSVインポート
+            </button>
+          </div>
+        </fieldset>
 
-        <div class="settings-area">
+        <fieldset class="settings-area">
+          <legend>設定</legend>
+          
           <div class="settings-group">
             <label for="scrollSpeed">スクロール速度:</label>
             <input
@@ -566,22 +69,22 @@
               max="5"
               value="1"
               step="0.1"
+              aria-describedby="scrollSpeed-value"
             />
-            <span id="scrollSpeedValue">1</span>
+            <span id="scrollSpeedValue" class="range-value" aria-live="polite">1</span>
           </div>
-
+          
           <div class="settings-group">
             <label for="chatTitleInput">タイトル:</label>
             <textarea
               id="chatTitleInput"
               placeholder="タイトルを入力"
-              rows="2" 
-              style="resize: vertical; width: 100%; font-size: 1em" 
-            >
-タイトル</textarea
-            >
+              rows="2"
+              class="title-input"
+              aria-describedby="title-help"
+            >タイトル</textarea>
           </div>
-
+          
           <div class="settings-group">
             <label for="titleBlankPercent">タイトル前の空白高さ（％）:</label>
             <input
@@ -590,487 +93,50 @@
               min="0"
               max="50"
               value="20"
+              aria-describedby="titleBlankPercent-value"
             />
-            <span id="titleBlankPercentValue">20</span>%
+            <span id="titleBlankPercentValue" class="range-value" aria-live="polite">20</span>%
           </div>
           
-          <div class="settings-group"> 
+          <div class="settings-group">
             <label for="titleHorizontalPosition">タイトル左右位置:</label>
             <input
               type="range"
               id="titleHorizontalPosition"
-              min="-100" 
-              max="100"  
-              value="0"   
+              min="-100"
+              max="100"
+              value="0"
               step="1"
+              aria-describedby="titleHorizontalPosition-value"
             />
-            <span id="titleHorizontalPositionValue">0px</span> 
+            <span id="titleHorizontalPositionValue" class="range-value" aria-live="polite">0px</span>
           </div>
           
-          <div class="settings-group"> 
+          <div class="settings-group">
             <label for="titleFontSize">タイトル文字サイズ:</label>
             <input
               type="range"
               id="titleFontSize"
-              min="1" 
-              max="5"  
-              value="2.8"   
+              min="1"
+              max="5"
+              value="2.8"
               step="0.1"
+              aria-describedby="titleFontSize-value"
             />
-            <span id="titleFontSizeValue">2.8em</span> 
+            <span id="titleFontSizeValue" class="range-value" aria-live="polite">2.8em</span>
           </div>
-
-
-          <button id="startRecording" class="button">録画開始</button>
-          <button id="stopRecording" class="button" disabled>録画停止</button>
-        </div>
+          
+          <div class="recording-controls">
+            <button id="startRecording" class="button primary-button" type="button">
+              録画開始
+            </button>
+            <button id="stopRecording" class="button secondary-button" type="button" disabled>
+              録画停止
+            </button>
+          </div>
+        </fieldset>
       </div>
     </div>
-    
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const chatDisplay = document.getElementById("chatDisplay"); 
-        const chatMessages = document.getElementById("chatMessages");
-        const chatBlankSpace = document.getElementById("chatBlankSpace");
-        const chatTitleText = document.getElementById("chatTitleText");
-        const conversationInput = document.getElementById("conversationInput");
-        const scrollSpeedInput = document.getElementById("scrollSpeed"); 
-        const scrollSpeedValue = document.getElementById("scrollSpeedValue");
-        const startRecordingButton = document.getElementById("startRecording"); 
-        const stopRecordingButton = document.getElementById("stopRecording");   
-        const chatTitleInput = document.getElementById("chatTitleInput");
-        const titleBlankPercentInput =
-          document.getElementById("titleBlankPercent");
-        const titleBlankPercentValue = document.getElementById(
-          "titleBlankPercentValue"
-        );
-        const titleHorizontalPositionInput = document.getElementById("titleHorizontalPosition");
-        const titleHorizontalPositionValue = document.getElementById("titleHorizontalPositionValue");
-        const titleFontSizeInput = document.getElementById("titleFontSize"); 
-        const titleFontSizeValue = document.getElementById("titleFontSizeValue"); 
-
-
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let isRecording = false;
-        let animationFrameId = null;
-        let currentScrollSpeed = parseFloat(scrollSpeedInput.value); 
-        let recWinGlobal = null; 
-
-        let chatTitle = chatTitleInput.value; 
-        let titleBlankPercent = parseInt(titleBlankPercentInput.value, 10);
-        let titleHorizontalPosition = parseInt(titleHorizontalPositionInput.value, 10); 
-        let titleFontSize = parseFloat(titleFontSizeInput.value); 
-
-        scrollSpeedValue.textContent = currentScrollSpeed; 
-        titleHorizontalPositionValue.textContent = titleHorizontalPosition + "px";
-        titleFontSizeValue.textContent = titleFontSize + "em"; 
-        chatTitleText.style.fontSize = titleFontSize + "em"; 
-
-
-        const conversationEditor =
-          document.getElementById("conversationEditor");
-        const csvExportButton = document.getElementById("csvExportButton");
-        const csvImportButton = document.getElementById("csvImportButton");
-        const csvImportInput = document.getElementById("csvImportInput");
-        let conversationRows = []; 
-        let draggedItemIndex = null; 
-
-        scrollSpeedInput.addEventListener("input", () => { 
-          currentScrollSpeed = parseFloat(scrollSpeedInput.value); 
-          scrollSpeedValue.textContent = currentScrollSpeed;
-        });
-
-        chatTitleInput.addEventListener("input", (e) => {
-          chatTitle = e.target.value; 
-          syncEditorToCSV(); 
-        });
-        
-        titleBlankPercentInput.addEventListener("input", (e) => {
-          titleBlankPercent = parseInt(titleBlankPercentInput.value, 10);
-          titleBlankPercentValue.textContent = titleBlankPercent;
-          syncEditorToCSV();
-        });
-
-        titleHorizontalPositionInput.addEventListener("input", (e) => {
-            titleHorizontalPosition = parseInt(e.target.value, 10);
-            titleHorizontalPositionValue.textContent = titleHorizontalPosition + "px"; 
-            syncEditorToCSV(); 
-        });
-        
-        titleFontSizeInput.addEventListener("input", (e) => {
-            titleFontSize = parseFloat(e.target.value);
-            titleFontSizeValue.textContent = titleFontSize + "em"; 
-            syncEditorToCSV(); 
-        });
-
-
-        function parseAndDisplayConversation(text) {
-          const lines = text.split("\n");
-          let lastProcessedDateString = null; // 日付区切り線用にリセット
-          chatBlankSpace.style.height = titleBlankPercent * 0.01 * 1000 + "px";
-          chatTitleText.innerHTML = chatTitle 
-            ? chatTitle.replace(/\n/g, "<br>")
-            : "";
-          chatTitleText.style.transform = `translateX(${titleHorizontalPosition}px)`;
-          chatTitleText.style.fontSize = titleFontSize + "em"; 
-          chatMessages.innerHTML = "";
-
-          const messagesWrapper = document.createElement("div");
-          messagesWrapper.style.display = "flex";
-          messagesWrapper.style.flexDirection = "column";
-          messagesWrapper.style.justifyContent = "flex-start";
-          messagesWrapper.style.width = "100%";
-
-          lines.forEach((line, idx) => {
-            if (!line.trim()) return;
-            
-            const headerLineNormalized = line.replace(/\s+/g, ",").toLowerCase(); 
-            if (
-              idx === 0 &&
-              (headerLineNormalized.startsWith("sender,type,content,date,timestamp") || 
-               headerLineNormalized.startsWith("sender,type,content,timestamp") || 
-               headerLineNormalized.startsWith("sender,type,content") || 
-               headerLineNormalized.startsWith("sender,text")) 
-            ) {
-                return;
-            }
-
-            const parts = line.split(/\t|,/); 
-
-            let sender, type, content, date, timestamp;
-            
-            if (parts.length >= 2) { 
-                sender = parts[0].trim();
-                type = parts[1].trim().toLowerCase(); 
-                content = parts.length >= 3 ? parts[2].trim() : "";  
-                date = parts.length >= 4 ? parts[3].trim() : null;      
-                timestamp = parts.length >= 5 ? parts[4].trim() : null; 
-
-                if (timestamp && timestamp.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
-                    const timeParts = timestamp.split(":");
-                    timestamp = `${timeParts[0]}:${timeParts[1]}`;
-                }
-            } else {
-                console.warn("Skipping invalid CSV line:", line);
-                return;
-            }
-
-            if (sender.toLowerCase() === "電話") {
-                type = "call";
-                content = parts.length >= 2 ? parts[1].trim() : "通話"; 
-                date = parts.length >=3 ? parts[2].trim() : null;
-                timestamp = parts.length >=4 ? parts[3].trim() : "";
-                 if (timestamp && timestamp.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
-                    const timeParts = timestamp.split(":");
-                    timestamp = `${timeParts[0]}:${timeParts[1]}`;
-                }
-            }
-
-
-            if (!sender) return; 
-
-             // 日付区切り表示ロジック
-            if(date) {
-                const currentMessageDate = new Date(date);
-                if (!isNaN(currentMessageDate.getTime())) { 
-                    const currentMessageDateStr = currentMessageDate.toISOString().split('T')[0];
-                    if (lastProcessedDateString === null || lastProcessedDateString !== currentMessageDateStr) {
-                         const dateSeparatorDiv = document.createElement('div');
-                         dateSeparatorDiv.classList.add('date-separator');
-                         dateSeparatorDiv.textContent = formatDateForSeparator(currentMessageDate);
-                         messagesWrapper.appendChild(dateSeparatorDiv);
-                    }
-                    lastProcessedDateString = currentMessageDateStr;
-                }
-            }
-
-
-            const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message");
-            
-            let messageSenderForClass = (sender.toLowerCase() === "電話") ? "男" : sender; 
-            messageDiv.classList.add(messageSenderForClass === "男" ? "sent" : "received");
-
-
-            const avatarDiv = document.createElement("div"); 
-            avatarDiv.classList.add("avatar");
-            if (messageSenderForClass === "男") { 
-                 // avatarDiv.style.backgroundImage = `url('${users.man.avatar}')`; 
-            } else if (messageSenderForClass === "女") {
-                 // avatarDiv.style.backgroundImage = `url('${users.woman.avatar}')`;
-            }
-            messageDiv.appendChild(avatarDiv);
-
-
-            let bubble;
-            if (type === "image") {
-              bubble = document.createElement("img"); /* ... */
-            } else if (type === "call") {
-                messageDiv.classList.add("call-log"); 
-                bubble = document.createElement("div");
-                bubble.classList.add("bubble"); 
-                
-                const callIconWrapper = document.createElement("div");
-                callIconWrapper.classList.add("call-icon-wrapper");
-                const callIcon = document.createElement("span");
-                callIcon.classList.add("call-icon");
-                callIcon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"></path></svg>`;
-                callIconWrapper.appendChild(callIcon);
-                
-                const callInfo = document.createElement("div");
-                callInfo.classList.add("call-info");
-                const callTypeText = document.createElement("div");
-                callTypeText.classList.add("call-type");
-                callTypeText.textContent = "音声通話"; 
-                const callDurationText = document.createElement("div");
-                callDurationText.classList.add("call-duration");
-                callDurationText.textContent = content; 
-
-                callInfo.appendChild(callTypeText);
-                callInfo.appendChild(callDurationText);
-                bubble.appendChild(callIconWrapper);
-                bubble.appendChild(callInfo);
-
-            } else { // text
-              bubble = document.createElement("div");
-              bubble.classList.add("bubble");
-              
-              let processedContent = content || ""; 
-              const japaneseOnlyRegex = /^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef\u4e00-\u9faf\u3400-\u4dbf]+$/u;
-              if (japaneseOnlyRegex.test(processedContent) && processedContent.length > 15) {
-                processedContent = processedContent.substring(0, 15) + '\n' + processedContent.substring(15);
-              }
-              bubble.innerHTML = processedContent.replace(/\n/g, "<br>");
-            }
-
-            const metaDiv = document.createElement("div");
-            metaDiv.classList.add("meta");
-            if (messageSenderForClass === "男") { 
-              const readDiv = document.createElement("div");
-              readDiv.classList.add("read-status");
-              readDiv.textContent = "既読";
-              metaDiv.appendChild(readDiv);
-            }
-            const timeDiv = document.createElement("div");
-            timeDiv.classList.add("timestamp");
-            timeDiv.textContent = timestamp ? timestamp : new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-            metaDiv.appendChild(timeDiv);
-
-            if (messageSenderForClass === "男") {
-              messageDiv.appendChild(metaDiv); 
-              messageDiv.appendChild(bubble);  
-            } else { // received
-              messageDiv.appendChild(bubble);
-              messageDiv.appendChild(metaDiv);
-            }
-
-            messagesWrapper.appendChild(messageDiv);
-          });
-          chatMessages.appendChild(messagesWrapper);
-        }
-        
-        // ... (他のJavaScript関数は変更なし)
-        function formatDateForSeparator(dateObj) {
-            const today = new Date();
-            const yesterday = new Date();
-            yesterday.setDate(today.getDate() - 1);
-
-            const dateObjNormalized = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-            const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const yesterdayNormalized = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-            if (dateObjNormalized.getTime() === todayNormalized.getTime()) return '今日';
-            if (dateObjNormalized.getTime() === yesterdayNormalized.getTime()) return '昨日';
-            
-            const M = dateObj.getMonth() + 1;
-            const D = dateObj.getDate();
-            const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
-            const day = dayNames[dateObj.getDay()];
-            return `${dateObj.getFullYear()}年${M}月${D}日 (${day})`; 
-        }
-
-        async function startScreenRecording() { /* ... (変更なし) */ }
-        function stopScreenRecording() { /* ... (変更なし) */ }
-        function autoScrollChatInWindow(elementToScroll) { /* ... (変更なし) */ }
-        if(startRecordingButton && stopRecordingButton) {
-            startRecordingButton.addEventListener("click", startScreenRecording);
-            stopRecordingButton.addEventListener("click", stopScreenRecording);
-        }
-        
-        function renderConversationEditor() {
-          conversationEditor.innerHTML = "";
-          const table = document.createElement("table");
-          table.style.width = "100%";
-          table.style.marginBottom = "10px";
-          const thead = document.createElement("thead");
-          thead.innerHTML = `<tr><th>話者</th><th>タイプ</th><th>内容</th><th>日付</th><th>時刻</th><th></th></tr>`; 
-          table.appendChild(thead);
-          const tbody = document.createElement("tbody");
-          
-          conversationRows.forEach((row, idx) => {
-            const tr = document.createElement("tr");
-            tr.draggable = true; 
-            tr.dataset.index = idx; 
-            // ... (ドラッグイベントリスナーは変更なし) ...
-
-            const speakerTd = document.createElement("td");
-            const manBtn = document.createElement("button"); /* ... */
-            const womanBtn = document.createElement("button"); /* ... */
-            const phoneBtn = document.createElement("button");
-            phoneBtn.textContent = "📞"; 
-            phoneBtn.style.background = row.type === "call" ? "#ccc" : "#eee"; 
-            phoneBtn.onclick = () => { row.speaker = "電話"; row.type = "call"; renderConversationEditor(); syncEditorToCSV(); };
-            
-            speakerTd.appendChild(manBtn); 
-            speakerTd.appendChild(womanBtn);
-            speakerTd.appendChild(phoneBtn); 
-            tr.appendChild(speakerTd);
-            
-            const typeTd = document.createElement("td");
-            const typeSelect = document.createElement("select");
-            typeSelect.innerHTML = `<option value="text">テキスト</option><option value="image">画像</option><option value="call">電話</option>`; 
-            typeSelect.value = row.type;
-            typeSelect.onchange = (e) => { row.type = e.target.value; if(row.type === 'call') row.speaker = '電話'; renderConversationEditor(); syncEditorToCSV(); };
-            typeTd.appendChild(typeSelect);
-            tr.appendChild(typeTd);
-
-            const contentTd = document.createElement("td");
-            if (row.type === "text") { /* ... */ } 
-            else if (row.type === "image") { /* ... */ } 
-            else if (row.type === "call") { 
-                const input = document.createElement("input"); input.type = "text"; input.value = row.content; 
-                input.placeholder = "通話時間 (例: 46:29)";
-                input.style.width = "180px";
-                input.oninput = (e) => { row.content = e.target.value; syncEditorToCSV(); };
-                contentTd.appendChild(input);
-            }
-            tr.appendChild(contentTd);
-            
-            const dateTd = document.createElement("td");
-            const dateInput = document.createElement("input");
-            dateInput.type = "text"; dateInput.placeholder = "YYYY/MM/DD"; dateInput.value = row.date || "";
-            dateInput.oninput = (e) => { row.date = e.target.value; syncEditorToCSV(); };
-            dateTd.appendChild(dateInput);
-            tr.appendChild(dateTd);
-
-            const timestampTd = document.createElement("td");
-            const timestampInput = document.createElement("input");
-            timestampInput.type = "text"; timestampInput.placeholder = "HH:MM"; timestampInput.value = row.timestamp || "";
-            timestampInput.oninput = (e) => { row.timestamp = e.target.value; syncEditorToCSV(); };
-            timestampTd.appendChild(timestampInput);
-            tr.appendChild(timestampTd);
-
-            const delTd = document.createElement("td"); /* ... */
-            tr.appendChild(delTd);
-            tbody.appendChild(tr);
-          });
-          table.appendChild(tbody);
-          conversationEditor.appendChild(table);
-
-          const addBtnContainer = document.createElement("div"); 
-          addBtnContainer.className = "add-btn-container";
-          const addTextBtn = document.createElement("button"); addTextBtn.textContent = "＋テキスト追加"; addTextBtn.className = "add-btn";
-          addTextBtn.onclick = () => { conversationRows.push({ speaker: "男", type: "text", content: "", date: "", timestamp: "" }); renderConversationEditor(); syncEditorToCSV(); };
-          
-          const addCallBtn = document.createElement("button"); 
-          addCallBtn.textContent = "＋電話追加"; addCallBtn.className = "add-btn";
-          addCallBtn.onclick = () => { conversationRows.push({ speaker: "電話", type: "call", content: "0:00", date: "", timestamp: "" }); renderConversationEditor(); syncEditorToCSV(); };
-
-          addBtnContainer.appendChild(addTextBtn);
-          addBtnContainer.appendChild(addCallBtn);
-          conversationEditor.appendChild(addBtnContainer);
-        }
-
-        function syncEditorToCSV() {
-          let csv = "sender,type,content,date,timestamp\n"; 
-          conversationRows.forEach((row) => {
-            let content = row.content ? row.content.replace(/\n/g, " ") : "";
-            let date = row.date || ""; 
-            let timestamp = row.timestamp || ""; 
-            let sender = row.speaker;
-            let type = row.type;
-            if (row.speaker === '電話') {
-                type = 'call';
-            }
-            csv += `${sender},${type},${content},${date},${timestamp}\n`;
-          });
-          conversationInput.value = csv; 
-          parseAndDisplayConversation(csv);
-        }
-
-        function syncCSVToEditor(csvText) { 
-          const lines = csvText.split(/\r?\n/);
-          conversationRows = [];
-          lines.forEach((line, idx) => {
-            if (!line.trim()) return;
-            const headerLineNormalized = line.replace(/\s+/g, ",").toLowerCase();
-            if (idx === 0 && (headerLineNormalized.startsWith("sender,type,content,date,timestamp") || headerLineNormalized.startsWith("sender,type,content,timestamp") || headerLineNormalized.startsWith("sender,type,content") || headerLineNormalized.startsWith("sender,text"))) return;
-            
-            const parts = line.split(/\t|,/); 
-            if (parts.length >= 2) { 
-              let speaker = parts[0].trim();
-              let type = parts[1].trim().toLowerCase();
-              let content = parts.length >= 3 ? parts[2].trim() : "";
-              let date = parts.length >= 4 ? parts[3].trim() : "";
-              let timestamp = parts.length >= 5 ? parts[4].trim() : ""; 
-
-              if (speaker.toLowerCase() === "電話") { 
-                  type = "call";
-                  content = parts.length >= 2 ? parts[1].trim() : "通話"; 
-                  date = parts.length >=3 ? parts[2].trim() : "";
-                  timestamp = parts.length >=4 ? parts[3].trim() : "";
-                  speaker = "男"; 
-              }
-              
-              if (timestamp && timestamp.match(/\d{4}\/\d{1,2}\/\d{1,2}\s\d{1,2}:\d{2}:\d{2}/)) {
-                const dateTimeParts = timestamp.split(" ");
-                if (dateTimeParts.length === 2) {
-                    const timeParts = dateTimeParts[1].split(":");
-                    if (timeParts.length >= 2) {
-                        timestamp = `${timeParts[0]}:${timeParts[1]}`;
-                    }
-                }
-              }
-
-              conversationRows.push({
-                speaker: speaker,
-                type: type,
-                content: content, 
-                date: date,
-                timestamp: timestamp
-              });
-            }
-          });
-          renderConversationEditor();
-        }
-
-        csvExportButton.addEventListener("click", () => { /* ... (変更なし) */ });
-        csvImportButton.addEventListener("click", () => { csvImportInput.click(); });
-        
-        csvImportInput.addEventListener("change", (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const csvText = event.target.result;
-              parseAndDisplayConversation(csvText); 
-              syncCSVToEditor(csvText); 
-            };
-            reader.readAsText(file);
-          }
-        });
-        
-        if (conversationInput.value.trim() !== "") {
-            syncCSVToEditor(conversationInput.value); 
-            parseAndDisplayConversation(conversationInput.value); 
-        } else {
-            renderConversationEditor(); 
-        }
-      });
-    </script>
+    <script src="script.js" defer></script>
   </body>
 </html>
