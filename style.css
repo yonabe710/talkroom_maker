@@ -179,7 +179,7 @@ fieldset legend {
     width: 490px;
     flex: 1 1 auto;
     min-height: 0;
-    padding: 0 0 30px 15px;
+    padding: 0 0 30px 25px;
     display: flex;
     flex-direction: column;
     background: transparent;
@@ -246,8 +246,8 @@ fieldset legend {
   /* 送信（右側・緑） */
   .message.sent {
     justify-content: flex-end;
-    padding-left: 42px;
-    padding-right: 10px;
+    padding-left: 60px;
+    padding-right: 30px;
   }
   .message.sent .bubble {
     background: #8de055;
@@ -272,7 +272,8 @@ fieldset legend {
   /* 受信（左側・白） */
   .message.received {
     justify-content: flex-start;
-    padding-right: 42px;
+    padding-left: 30px;
+    padding-right: 60px;
   }
   .message.received .bubble {
     background: #edf1ee;
@@ -467,9 +468,9 @@ fieldset legend {
     background: #ff69b4;
     border: none;
     border-radius: 50%;
-    width: 2em;
-    height: 2em;
-    font-size: 1.1em;
+    width: 1.6em;
+    height: 1.6em;
+    font-size: 0.9em;
     font-weight: bold;
     cursor: pointer;
     margin-left: 4px;
@@ -477,6 +478,13 @@ fieldset legend {
   }
   #conversationEditor .del-btn:hover {
     background: #e60073;
+  }
+
+  /* 列幅の設定 */
+  #conversationEditor th:nth-child(3),
+  #conversationEditor td:nth-child(3) {
+    width: 100px;
+    max-width: 100px;
   }
   
   /* CSVボタン */
