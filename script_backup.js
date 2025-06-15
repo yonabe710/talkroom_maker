@@ -52,37 +52,19 @@ document.addEventListener("DOMContentLoaded", () => {
       
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        const nextChar = i + 1 < line.length ? line[i + 1] : null;
         
         if (char === '"') {
-          if (inQuotes && nextChar === '"') {
-            // エスケープされた引用符 ("") を単一の引用符として追加
-            current += '"';
-            i++; // 次の引用符をスキップ
-          } else {
-            // 引用符の開始/終了を切り替え
-            inQuotes = !inQuotes;
-          }
+          inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
-          // フィールドの区切り
-          result.push(cleanCsvField(current));
+          result.push(current.trim());
           current = '';
         } else {
           current += char;
         }
       }
       
-      result.push(cleanCsvField(current));
+      result.push(current.trim());
       return result;
-    }
-    
-    function cleanCsvField(field) {
-      const trimmed = field.trim();
-      // 前後の引用符を除去
-      if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-        return trimmed.slice(1, -1);
-      }
-      return trimmed;
     }
 
     function formatDateForSeparator(date) {
@@ -125,6 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const lines = text.split("\n");
       let lastProcessedDateString = null;
       console.log("Processing CSV with", lines.length, "lines");
+      console.log("First few lines:", lines.slice(0, 3));
       chatBlankSpace.style.height = titleBlankPercent * 0.01 * 1000 + "px";
       chatTitleText.innerHTML = chatTitle ? chatTitle.replace(/\n/g, "<br>") : "";
       chatTitleText.style.transform = `translateX(${titleHorizontalPosition}px)`;
@@ -182,7 +165,10 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
   
-        if (!sender) return;
+        if (!sender) {
+          console.log("Skipping message with empty sender:", line);
+          return;
+        }
         
         console.log("Processing message:", { sender, type, content, date, timestamp });
   
@@ -216,78 +202,33 @@ document.addEventListener("DOMContentLoaded", () => {
   
         let bubble;
         if (type === "image") {
-          console.log("画像処理開始 - content検証:", {
-            hasContent: !!content,
-            contentLength: content ? content.length : 0,
-            startsWithDataImage: content ? content.startsWith("data:image/") : false,
-            hasComma: content ? content.includes(",") : false,
-            splitLength: content ? content.split(",").length : 0,
-            base64Length: content && content.includes(",") ? content.split(",")[1].length : 0,
-            contentPreview: content ? content.substring(0, 100) + "..." : "null"
-          });
+          console.log("画像処理開始:", { content: content ? content.substring(0, 50) + "..." : "empty" });
+          bubble = document.createElement("img");
+          bubble.alt = "画像";
+          bubble.style.width = "360px";
+          bubble.style.height = "auto";
+          bubble.style.borderRadius = "16px";
+          bubble.style.display = "block";
+          bubble.style.margin = "0";
           
-          // より厳密な画像データ検証
-          const isValidImageData = content && 
-                                  content.startsWith("data:image/") && 
-                                  content.includes(",") && 
-                                  content.split(",").length === 2 &&
-                                  content.split(",")[1].length > 10; // base64データが最低限ある
-          
-          if (!isValidImageData) {
-            // 無効な画像データの場合はdivで表示
-            bubble = document.createElement("div");
-            bubble.style.width = "360px";
-            bubble.style.height = "180px";
-            bubble.style.backgroundColor = "#f5f5f5";
-            bubble.style.display = "flex";
-            bubble.style.alignItems = "center";
-            bubble.style.justifyContent = "center";
-            bubble.style.borderRadius = "16px";
-            bubble.style.color = "#999";
-            bubble.style.fontSize = "14px";
-            bubble.textContent = "画像データが無効です";
+          if (!content || content.trim() === "") {
+            console.error("画像のcontentが空です");
+            bubble.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDM2MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMTgwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjE4MCIgeT0iOTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCI+Q29udGVudOOBjOepuuOBp+OBmeOAgjwvdGV4dD48L3N2Zz4=";
+            bubble.alt = "画像データが空です";
+          } else if (!content.startsWith("data:image/")) {
+            console.error("無効な画像データ形式:", content.substring(0, 30));
+            bubble.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDM2MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMTgwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjE4MCIgeT0iOTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCI+54Sh5Yq544Gq5b2i5byP44CC8J+4ojwvdGV4dD48L3N2Zz4=";
+            bubble.alt = "無効な形式です";
           } else {
-            // 有効な画像データの場合
-            bubble = document.createElement("img");
+            console.log("正常な画像データを設定中");
             bubble.src = content;
-            bubble.alt = "画像";
-            bubble.style.width = "360px";
-            bubble.style.height = "auto";
-            bubble.style.borderRadius = "16px";
-            bubble.style.display = "block";
-            bubble.style.margin = "0";
-            
-            // 成功時のログ
             bubble.onload = () => {
-              console.log("画像読み込み成功:", content.substring(0, 50) + "...");
+              console.log("画像読み込み成功");
             };
-            
-            // エラーハンドリング（無限ループを防ぐ）
-            let hasErrored = false;
             bubble.onerror = (e) => {
-              if (!hasErrored) {
-                hasErrored = true;
-                console.error("画像読み込みエラー詳細:", {
-                  event: e,
-                  src: bubble.src,
-                  contentType: content.split(',')[0],
-                  contentLength: content.length,
-                  isValidDataUrl: content.startsWith('data:image/')
-                });
-                bubble.style.display = "none";
-                const errorDiv = document.createElement("div");
-                errorDiv.style.width = "360px";
-                errorDiv.style.height = "180px";
-                errorDiv.style.backgroundColor = "#f5f5f5";
-                errorDiv.style.display = "flex";
-                errorDiv.style.alignItems = "center";
-                errorDiv.style.justifyContent = "center";
-                errorDiv.style.borderRadius = "16px";
-                errorDiv.style.color = "#999";
-                errorDiv.style.fontSize = "14px";
-                errorDiv.textContent = "画像を読み込めませんでした";
-                bubble.parentNode.insertBefore(errorDiv, bubble.nextSibling);
-              }
+              console.error("画像読み込みエラー:", e, "src:", content.substring(0, 100));
+              bubble.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDM2MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMTgwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjE4MCIgeT0iOTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCI+6Kqt44G/6L6844G/44Ko44Op44O844CC8J+YxTwvdGV4dD48L3N2Zz4=";
+              bubble.alt = "読み込みエラー";
             };
           }
         } else if (type === "phone" || type === "call") {
@@ -367,12 +308,22 @@ document.addEventListener("DOMContentLoaded", () => {
   
         messagesWrapper.appendChild(messageDiv);
       });
+      console.log("Total messages processed:", messagesWrapper.children.length);
       chatMessages.appendChild(messagesWrapper);
     }
   
     // --- 録画機能関連 ---
     async function startScreenRecording() {
       try {
+        // HTTPS接続チェック
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          alert("画面録画機能はHTTPS接続が必要です。\n\n" +
+                "対処法:\n" +
+                "1. ローカルサーバーで開く (localhost)\n" +
+                "2. HTTPS対応のサーバーで開く\n" +
+                "3. Chrome等で開発者モードを使用する");
+          return;
+        }
         const recWinWidth = chatDisplay.offsetWidth;
         const recWinHeight = 1040;
         recWinGlobal = window.open(
@@ -420,9 +371,19 @@ document.addEventListener("DOMContentLoaded", () => {
           recChatDisplay.style.height = `${recWinHeight}px`;
           recChatLeft.scrollTop = 0;
   
-          alert(
-            "録画用の新しいウィンドウが開きました。\n画面共有の選択ダイアログでこのウィンドウを選択してください。"
-          );
+          const confirmMessage = 
+            "録画用の新しいウィンドウが開きました。\n\n" +
+            "次の手順で録画を開始します：\n" +
+            "1. 「OK」を押すと画面共有ダイアログが表示されます\n" +
+            "2. 「ウィンドウ」タブを選択してください\n" +
+            "3. 「録画対象」という名前のウィンドウを選択してください\n" +
+            "4. 「共有」ボタンを押してください\n\n" +
+            "準備はよろしいですか？";
+          
+          if (!confirm(confirmMessage)) {
+            if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
+            return;
+          }
   
           let stream;
           try {
@@ -431,8 +392,29 @@ document.addEventListener("DOMContentLoaded", () => {
               audio: false,
             });
           } catch (err) {
-            alert("画面録画の許可が得られませんでした。");
-            recWinGlobal.close();
+            console.error("画面録画エラー:", err);
+            let errorMessage = "画面録画の許可が得られませんでした。\n\n";
+            
+            if (err.name === 'NotAllowedError') {
+              errorMessage += "対処法:\n";
+              errorMessage += "1. ブラウザで画面共有の許可を与えてください\n";
+              errorMessage += "2. 「このタブ」または「ウィンドウ」を選択してください\n";
+              errorMessage += "3. ChromeやEdgeの最新版を使用してください";
+            } else if (err.name === 'NotSupportedError') {
+              errorMessage += "お使いのブラウザは画面録画に対応していません。\n";
+              errorMessage += "Chrome、Firefox、Edgeの最新版をお試しください。";
+            } else if (err.name === 'NotFoundError') {
+              errorMessage += "録画デバイスが見つかりません。\n";
+              errorMessage += "ブラウザを再起動してお試しください。";
+            } else if (err.name === 'AbortError') {
+              errorMessage += "画面共有がキャンセルされました。\n";
+              errorMessage += "録画を開始するには、画面共有の許可が必要です。";
+            } else {
+              errorMessage += "エラー詳細: " + err.message;
+            }
+            
+            alert(errorMessage);
+            if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
             return;
           }
           
@@ -530,6 +512,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tr = document.createElement("tr");
         tr.draggable = true;
         tr.dataset.index = idx;
+        
         tr.addEventListener("dragstart", (e) => {
           draggedItemIndex = idx;
           e.dataTransfer.effectAllowed = "move";
@@ -604,17 +587,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
-              console.log("FileReader結果:", {
-                resultLength: ev.target.result ? ev.target.result.length : 0,
-                resultPreview: ev.target.result ? ev.target.result.substring(0, 100) + "..." : "null",
-                isValidDataUrl: ev.target.result ? ev.target.result.startsWith("data:image/") : false
-              });
               row.content = ev.target.result;
               syncEditorToCSV();
               renderConversationEditor();
-            };
-            reader.onerror = (e) => {
-              console.error("FileReader エラー:", e);
             };
             reader.readAsDataURL(file);
           };
@@ -626,6 +601,15 @@ document.addEventListener("DOMContentLoaded", () => {
             img.style.height = "auto";
             img.style.marginLeft = "8px";
             img.style.borderRadius = "8px";
+            img.onerror = () => {
+              img.style.display = "none";
+              const errorText = document.createElement("span");
+              errorText.textContent = "画像エラー";
+              errorText.style.color = "#ff0000";
+              errorText.style.fontSize = "12px";
+              errorText.style.marginLeft = "8px";
+              contentGroup.appendChild(errorText);
+            };
             contentGroup.appendChild(img);
           }
         } else if (row.type === "phone") {
@@ -708,16 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let content = row.content ? row.content.replace(/\n/g, " ") : "";
         let date = row.date || "";
         let timestamp = row.timestamp || "";
-        
-        // CSVでカンマや引用符を含むフィールドを適切にエスケープ
-        const escapeCsvField = (field) => {
-          if (field.includes(",") || field.includes('"') || field.includes("\n")) {
-            return '"' + field.replace(/"/g, '""') + '"';
-          }
-          return field;
-        };
-        
-        csv += `${escapeCsvField(row.speaker)},${escapeCsvField(row.type)},${escapeCsvField(content)},${escapeCsvField(date)},${escapeCsvField(timestamp)}\n`;
+        csv += `${row.speaker},${row.type},${content},${date},${timestamp}\n`;
       });
       conversationInput.value = csv;
       parseAndDisplayConversation(csv);
@@ -741,7 +716,6 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
   
         const parts = parseCsvLine(line);
-        console.log("CSV行解析:", { line: line.substring(0, 100) + "...", parts: parts.map(p => p.substring(0, 50) + "...") });
         if (parts.length >= 2) {
           let speaker = parts[0].trim();
           let type = parts[1].trim().toLowerCase();
@@ -801,6 +775,8 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.onload = (event) => {
           const csvText = event.target.result;
           conversationInput.value = csvText;
+          // CSVインポート時にタイトルを更新
+          chatTitle = chatTitleInput.value;
           parseAndDisplayConversation(csvText);
           syncCSVToEditor(csvText);
           // ファイル選択をリセットして、同じファイルでも再選択可能にする
