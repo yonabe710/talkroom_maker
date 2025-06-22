@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pairs風チャットレコーダー</title>
+    <meta name="description" content="Pairs風チャットの録画ツール" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap"
+      rel="stylesheet"
+      preconnect
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <main class="chat-display" id="chatDisplay" role="main" aria-label="チャット表示エリア">
+        <section class="chat-left" aria-label="チャットコンテンツ">
+          <div id="chatBlankSpace" class="chat-blank-space" aria-hidden="true"></div>
+          <header class="chat-header">
+            <button class="back-button" aria-label="戻る" type="button">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="profile-info">
+              <div class="profile-avatar">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23ddd'/%3E%3Ctext x='20' y='25' text-anchor='middle' font-family='Arial' font-size='16' fill='%23666'%3EK%3C/text%3E%3C/svg%3E" alt="プロフィール画像" />
+              </div>
+              <span id="chatTitleText" class="profile-name">K</span>
+            </div>
+            <div class="header-actions">
+              <button class="action-btn" aria-label="通話" type="button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 16.92V19.92C22 20.52 21.52 21 20.92 21C10.93 21 3 13.07 3 3.08C3 2.48 3.48 2 4.08 2H7.08C7.68 2 8.16 2.48 8.16 3.08C8.16 4.08 8.34 5.03 8.67 5.93C8.79 6.22 8.69 6.56 8.43 6.82L6.82 8.43C8.24 11.25 11.75 14.76 14.57 16.18L16.18 14.57C16.44 14.31 16.78 14.21 17.07 14.33C17.97 14.66 18.92 14.84 19.92 14.84C20.52 14.84 21 15.32 21 15.92V16.92H22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="action-btn" aria-label="その他" type="button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                  <circle cx="19" cy="12" r="1" fill="currentColor"/>
+                  <circle cx="5" cy="12" r="1" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+          <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="チャットメッセージ"></div>
+        </section>
+        <div class="tiktok-blank" aria-hidden="true"></div>
+      </main>
+
+      <aside class="input-area" role="complementary" aria-label="設定とコントロール">
+        <div class="hint-message">
+          <span class="icon" aria-hidden="true">📋</span>
+          <span class="hint">画像はコピー＆ペーストでも追加できます</span>
+        </div>
+        <div id="conversationEditor" aria-label="会話エディター"></div>
+        <div class="input-group">
+          <textarea
+            id="conversationInput"
+            class="hidden-input"
+            placeholder="sender,type,content,date,timestamp 例:&#10;男,text,こんにちは,2024/05/31,10:30&#10;電話,phone,46:29,2024/05/31,22:59"
+            aria-label="会話データ入力"
+          ></textarea>
+        </div>
+
+        <fieldset class="csv-controls">
+          <legend>CSV操作</legend>
+          <div class="button-group">
+            <button id="csvExportButton" type="button" class="csv-btn" aria-describedby="export-help">
+              <span aria-hidden="true">📤</span> CSVエクスポート
+            </button>
+            <input
+              type="file"
+              id="csvImportInput"
+              accept=".csv,text/csv"
+              aria-label="CSVファイルを選択"
+              class="visually-hidden"
+            />
+            <button id="csvImportButton" type="button" class="csv-btn" aria-describedby="import-help">
+              <span aria-hidden="true">📥</span> CSVインポート
+            </button>
+          </div>
+          <small id="export-help" class="help-text">現在の会話をCSVファイルでダウンロード</small>
+          <small id="import-help" class="help-text">CSVファイルから会話を読み込み</small>
+        </fieldset>
+
+        <fieldset class="title-controls">
+          <legend>タイトル設定</legend>
+          <div class="input-group">
+            <label for="chatTitleInput">チャットタイトル</label>
+            <input
+              type="text"
+              id="chatTitleInput"
+              value="K"
+              aria-describedby="title-help"
+            />
+            <small id="title-help" class="help-text">動画内に表示されるタイトル</small>
+          </div>
+          
+          <div class="input-group">
+            <label for="titleBlankPercent">
+              タイトル上余白: <span id="titleBlankPercentValue">40</span>%
+            </label>
+            <input
+              type="range"
+              id="titleBlankPercent"
+              min="0"
+              max="80"
+              value="40"
+              aria-describedby="blank-help"
+            />
+            <small id="blank-help" class="help-text">動画上部の余白の大きさ</small>
+          </div>
+
+          <div class="input-group">
+            <label for="titleHorizontalPosition">
+              タイトル横位置: <span id="titleHorizontalPositionValue">0px</span>
+            </label>
+            <input
+              type="range"
+              id="titleHorizontalPosition"
+              min="-100"
+              max="100"
+              value="0"
+              aria-describedby="position-help"
+            />
+            <small id="position-help" class="help-text">タイトルの左右位置調整</small>
+          </div>
+
+          <div class="input-group">
+            <label for="titleFontSize">
+              タイトルフォントサイズ: <span id="titleFontSizeValue">1.2em</span>
+            </label>
+            <input
+              type="range"
+              id="titleFontSize"
+              min="0.8"
+              max="2.0"
+              step="0.1"
+              value="1.2"
+              aria-describedby="font-help"
+            />
+            <small id="font-help" class="help-text">タイトル文字の大きさ</small>
+          </div>
+        </fieldset>
+
+        <fieldset class="recording-controls">
+          <legend>録画設定</legend>
+          <div class="input-group">
+            <label for="scrollSpeed">
+              スクロール速度: <span id="scrollSpeedValue">1.0</span>
+            </label>
+            <input
+              type="range"
+              id="scrollSpeed"
+              min="0.5"
+              max="5.0"
+              step="0.1"
+              value="1.0"
+              aria-describedby="speed-help"
+            />
+            <small id="speed-help" class="help-text">チャットの自動スクロール速度</small>
+          </div>
+          
+          <div class="button-group">
+            <button id="startRecording" type="button" class="recording-btn primary" aria-describedby="start-help">
+              <span aria-hidden="true">🎬</span> 録画開始
+            </button>
+            <button id="stopRecording" type="button" class="recording-btn secondary" disabled aria-describedby="stop-help">
+              <span aria-hidden="true">⏹</span> 録画停止
+            </button>
+          </div>
+          <small id="start-help" class="help-text">新しいウィンドウで録画を開始</small>
+          <small id="stop-help" class="help-text">録画を停止してファイルをダウンロード</small>
+        </fieldset>
+      </aside>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

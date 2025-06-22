@@ -356,12 +356,13 @@ document.addEventListener("DOMContentLoaded", () => {
             /^[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef\u4e00-\u9faf\u3400-\u4dbf]+$/u;
           if (
             japaneseOnlyRegex.test(processedContent) &&
-            processedContent.length > 15
+            processedContent.length > 16
           ) {
-            processedContent =
-              processedContent.substring(0, 15) +
-              "\n" +
-              processedContent.substring(15);
+            const lines = [];
+            for (let i = 0; i < processedContent.length; i += 17) {
+              lines.push(processedContent.substring(i, i + 17));
+            }
+            processedContent = lines.join("\n");
           }
           bubble.innerHTML = processedContent.replace(/\n/g, "<br>");
         }
