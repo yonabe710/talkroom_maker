@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "reload -b"
+    "start": "reload -b index.html",
+    "start:app2": "reload -b -p 3001 -e html,js,css app2"
   },
   "repository": {
     "type": "git",

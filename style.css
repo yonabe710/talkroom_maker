@@ -189,11 +189,11 @@ fieldset legend {
   }
   
   .chat-messages::after {
-    content: "";
-    display: block;
-    height: 180px;
-    flex-shrink: 0;
-  }
+  content: "";
+  display: block;
+  height: 500px;
+  flex-shrink: 0;
+}
   
   .date-separator {
     text-align: center;
@@ -219,7 +219,7 @@ fieldset legend {
     margin-bottom: 0px;
   }
   
-  .message .avatar {
+  .message.sent .avatar {
     display: none !important;
   }
   
@@ -293,6 +293,36 @@ fieldset legend {
     border-bottom: 8px solid transparent;
     transform: rotate(35deg);
     -webkit-transform: rotate(35deg);
+  }
+
+  /* 女性側アバター（丸型） */
+  .message.received .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f0f0f0;
+    margin-right: 10px;
+    margin-bottom: 5px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ddd;
+  }
+
+  .message.received .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .message.received .avatar.default {
+    background-color: #ff69b4;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
   }
   
   /* タイムスタンプ & 既読 */

@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const titleHorizontalPositionValue = document.getElementById("titleHorizontalPositionValue");
     const titleFontSizeInput = document.getElementById("titleFontSize");
     const titleFontSizeValue = document.getElementById("titleFontSizeValue");
+    const endMessagePositionInput = document.getElementById("endMessagePosition");
+    const endMessagePositionValue = document.getElementById("endMessagePositionValue");
   
     // 録画関連の状態
     let mediaRecorder = null;
@@ -29,12 +31,23 @@ document.addEventListener("DOMContentLoaded", () => {
     let titleBlankPercent = parseInt(titleBlankPercentInput.value, 10);
     let titleHorizontalPosition = parseInt(titleHorizontalPositionInput.value, 10);
     let titleFontSize = parseFloat(titleFontSizeInput.value);
+    let endMessagePosition = parseFloat(endMessagePositionInput.value);
     
     scrollSpeedValue.textContent = currentScrollSpeed;
     titleBlankPercentValue.textContent = titleBlankPercent + "%";
     titleHorizontalPositionValue.textContent = titleHorizontalPosition + "px";
     titleFontSizeValue.textContent = titleFontSize + "em";
     chatTitleText.textContent = chatTitle;
+    
+    function updateEndMessagePositionLabel(value) {
+        if (value <= 0.2) return "上端";
+        if (value <= 0.4) return "上寄り";
+        if (value <= 0.6) return "中央";
+        if (value <= 0.8) return "下寄り";
+        return "下端";
+    }
+    
+    endMessagePositionValue.textContent = updateEndMessagePositionLabel(endMessagePosition);
 
     // 会話エディタ関連
     const conversationEditor = document.getElementById("conversationEditor");
@@ -143,6 +156,11 @@ document.addEventListener("DOMContentLoaded", () => {
     titleFontSizeInput.addEventListener("input", (e) => {
         titleFontSize = parseFloat(e.target.value);
         titleFontSizeValue.textContent = titleFontSize + "em";
+    });
+    
+    endMessagePositionInput.addEventListener("input", (e) => {
+        endMessagePosition = parseFloat(e.target.value);
+        endMessagePositionValue.textContent = updateEndMessagePositionLabel(endMessagePosition);
     });
 
     function parseAndDisplayConversation(text) {
@@ -438,14 +456,44 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const scrollAmount = Number(scrollSpeedInput.value);
       elementToScroll.scrollTop += scrollAmount;
-      if (elementToScroll.scrollTop + elementToScroll.clientHeight < elementToScroll.scrollHeight) {
-        animationFrameId = recWinGlobal.requestAnimationFrame(() =>
-          autoScrollChatInWindow(elementToScroll)
-        );
+      
+      // 最後のメッセージが指定位置に来るまでスクロールを続ける
+      const lastMessage = elementToScroll.querySelector('.message-item:last-child');
+      if (lastMessage) {
+        const lastMessageTop = lastMessage.offsetTop;
+        const lastMessageHeight = lastMessage.offsetHeight;
+        const lastMessageCenter = lastMessageTop + lastMessageHeight / 2;
+        const containerHeight = elementToScroll.clientHeight;
+        const containerScrollTop = elementToScroll.scrollTop;
+        
+        // 指定された位置を計算（0:上端、0.5:中央、1:下端）
+        const targetPosition = containerScrollTop + containerHeight * endMessagePosition;
+        
+        // デバッグ情報をコンソールに出力
+        console.log(`最後のメッセージ中央: ${lastMessageCenter}px, 目標位置: ${targetPosition}px, 差: ${lastMessageCenter - targetPosition}px`);
+        
+        // 最後のメッセージの中央が目標位置より下にある場合は継続
+        if (lastMessageCenter > targetPosition) {
+          animationFrameId = recWinGlobal.requestAnimationFrame(() =>
+            autoScrollChatInWindow(elementToScroll)
+          );
+        } else {
+          console.log("スクロール完了: 最後のメッセージが目標位置に到達しました");
+          setTimeout(() => {
+            if (mediaRecorder && isRecording) stopScreenRecording();
+          }, 3000);
+        }
       } else {
-        setTimeout(() => {
-          if (mediaRecorder && isRecording) stopScreenRecording();
-        }, 3000);
+        // フォールバック: 従来の方式
+        if (elementToScroll.scrollTop + elementToScroll.clientHeight < elementToScroll.scrollHeight) {
+          animationFrameId = recWinGlobal.requestAnimationFrame(() =>
+            autoScrollChatInWindow(elementToScroll)
+          );
+        } else {
+          setTimeout(() => {
+            if (mediaRecorder && isRecording) stopScreenRecording();
+          }, 3000);
+        }
       }
     }
 

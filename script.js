@@ -33,6 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let titleHorizontalPosition = parseInt(titleHorizontalPositionInput.value, 10);
     let titleFontSize = parseFloat(titleFontSizeInput.value);
     
+    // 女性アイコンの管理
+    let femaleAvatarImage = null;
+    
     scrollSpeedValue.textContent = currentScrollSpeed;
     titleHorizontalPositionValue.textContent = titleHorizontalPosition + "px";
     titleFontSizeValue.textContent = titleFontSize + "em";
@@ -43,6 +46,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const csvExportButton = document.getElementById("csvExportButton");
     const csvImportButton = document.getElementById("csvImportButton");
     const csvImportInput = document.getElementById("csvImportInput");
+    const femaleAvatarUpload = document.getElementById("femaleAvatarUpload");
+    const femaleAvatarButton = document.getElementById("femaleAvatarButton");
     let conversationRows = [];
     let draggedItemIndex = null;
 
@@ -113,9 +118,43 @@ document.addEventListener("DOMContentLoaded", () => {
       const trimmed = field.trim();
       // 前後の引用符を除去
       if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-        return trimmed.slice(1, -1);
+        const unquoted = trimmed.slice(1, -1);
+        // エスケープされた改行文字を実際の改行文字に変換
+        return unquoted.replace(/\\n/g, '\n').replace(/""/g, '"');
       }
-      return trimmed;
+      // エスケープされた改行文字を実際の改行文字に変換
+      return trimmed.replace(/\\n/g, '\n');
+    }
+
+    function parseCSVLines(text) {
+      const lines = [];
+      let currentLine = '';
+      let inQuotes = false;
+      let i = 0;
+      
+      while (i < text.length) {
+        const char = text[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          currentLine += char;
+        } else if (char === '\n' && !inQuotes) {
+          if (currentLine.trim()) {
+            lines.push(currentLine);
+          }
+          currentLine = '';
+        } else {
+          currentLine += char;
+        }
+        i++;
+      }
+      
+      // 最後の行を追加
+      if (currentLine.trim()) {
+        lines.push(currentLine);
+      }
+      
+      return lines;
     }
 
     function formatDateForSeparator(date) {
@@ -155,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   
     function parseAndDisplayConversation(text) {
-      const lines = text.split("\n");
+      const lines = parseCSVLines(text);
       let lastProcessedDateString = null;
       console.log("Processing CSV with", lines.length, "lines");
       chatBlankSpace.style.height = titleBlankPercent * 0.01 * 1000 + "px";
@@ -394,6 +433,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           const avatarDiv = document.createElement("div");
           avatarDiv.classList.add("avatar");
+          
+          // 女性アイコンの表示
+          if (femaleAvatarImage) {
+            const avatarImg = document.createElement("img");
+            avatarImg.src = femaleAvatarImage;
+            avatarImg.alt = "女性アイコン";
+            avatarDiv.appendChild(avatarImg);
+          } else {
+            avatarDiv.classList.add("default");
+            avatarDiv.textContent = "女";
+          }
+          
           messageDiv.appendChild(avatarDiv);
           messageDiv.appendChild(bubble);
           messageDiv.appendChild(metaDiv);
@@ -758,14 +809,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function syncEditorToCSV() {
       let csv = "sender,type,content,date,timestamp\n";
       conversationRows.forEach((row) => {
-        let content = row.content ? row.content.replace(/\n/g, " ") : "";
+        let content = row.content || "";
         let date = row.date || "";
         let timestamp = row.timestamp || "";
         
         // CSVでカンマや引用符を含むフィールドを適切にエスケープ
         const escapeCsvField = (field) => {
           if (field.includes(",") || field.includes('"') || field.includes("\n")) {
-            return '"' + field.replace(/"/g, '""') + '"';
+            return '"' + field.replace(/"/g, '""').replace(/\n/g, '\\n') + '"';
           }
           return field;
         };
@@ -777,7 +828,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     function syncCSVToEditor(csvText) {
-      const lines = csvText.split(/\r?\n/);
+      const lines = parseCSVLines(csvText);
       conversationRows = [];
       lines.forEach((line, idx) => {
         if (!line.trim()) return;
@@ -860,6 +911,26 @@ document.addEventListener("DOMContentLoaded", () => {
           csvImportInput.value = '';
         };
         reader.readAsText(file, 'UTF-8');
+      }
+    });
+    
+    // 女性アイコンアップロード機能
+    femaleAvatarButton.addEventListener("click", () => {
+      femaleAvatarUpload.click();
+    });
+    
+    femaleAvatarUpload.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          femaleAvatarImage = event.target.result;
+          // チャット表示を更新
+          if (conversationInput.value.trim() !== "") {
+            parseAndDisplayConversation(conversationInput.value);
+          }
+        };
+        reader.readAsDataURL(file);
       }
     });
     

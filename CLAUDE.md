@@ -71,3 +71,7 @@ sender,type,content,date,timestamp
 - Media APIs: MediaRecorder, getDisplayMedia, FileReader
 - Japanese language optimized with Noto Sans JP font
 - Responsive design with fixed chat width, flexible control panel
+
+## User Communication Guidelines
+
+- **Long-running operations**: If any task will take more than 30 seconds to complete, provide a status update to inform the user of progress or current state

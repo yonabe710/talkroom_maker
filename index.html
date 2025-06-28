@@ -61,6 +61,21 @@
           <legend>設定</legend>
           
           <div class="settings-group">
+            <label for="femaleAvatarUpload">女性アイコン画像:</label>
+            <input
+              type="file"
+              id="femaleAvatarUpload"
+              accept="image/*"
+              class="file-input"
+              aria-describedby="avatar-help"
+            />
+            <button id="femaleAvatarButton" type="button" class="csv-btn">
+              画像を選択
+            </button>
+            <small id="avatar-help" class="help-text">女性側メッセージのアイコン画像を選択</small>
+          </div>
+          
+          <div class="settings-group">
             <label for="scrollSpeed">スクロール速度:</label>
             <input
               type="range"
