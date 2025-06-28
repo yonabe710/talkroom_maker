@@ -73,17 +73,25 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (err.name === 'NotAllowedError') {
         errorMessage += "⚠️ ユーザーが画面共有を拒否しました。\n";
         errorMessage += "解決方法:\n";
-        errorMessage += "1. Braveの🛡️アイコンからShieldsを無効化\n";
-        errorMessage += "2. サイト設定で画面共有を許可\n";
-        errorMessage += "3. 録画ボタンをもう一度クリック\n";
+        errorMessage += "1. ブラウザのアドレスバー左の🔒をクリック\n";
+        errorMessage += "2. 「画面の共有」を「許可」に変更\n";
+        errorMessage += "3. ページを再読み込みしてから録画\n";
+        errorMessage += "4. Braveの場合は🛡️アイコンからShieldsを無効化\n";
       } else if (err.name === 'AbortError') {
-        errorMessage += "⚠️ 画面共有がキャンセルされました。\n";
+        errorMessage += "⚠️ 画面共有が中断されました。\n";
         errorMessage += "解決方法:\n";
-        errorMessage += "1. 少し待ってから再度お試しください\n";
-        errorMessage += "2. ページを再読み込みしてから録画してください\n";
+        errorMessage += "1. 他のアプリの画面共有を終了\n";
+        errorMessage += "2. ブラウザタブを減らす\n";
+        errorMessage += "3. 5秒待ってから再試行\n";
+        errorMessage += "4. ブラウザを再起動\n";
       } else if (err.name === 'NotSupportedError') {
         errorMessage += "⚠️ ブラウザが画面録画に対応していません。\n";
-        errorMessage += "Chrome、Firefox、Edgeをお試しください。\n";
+        errorMessage += "Chrome、Firefox、Edgeの最新版をお試しください。\n";
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage += "⚠️ 画面設定に問題があります。\n";
+        errorMessage += "解決方法:\n";
+        errorMessage += "1. ディスプレイ解像度を確認\n";
+        errorMessage += "2. 他の画面録画アプリを終了\n";
       }
       
       return errorMessage;
@@ -291,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
           phoneIcon.textContent = "📞";
           bubble.appendChild(phoneIcon);
           const phoneText = document.createElement("span");
-          phoneText.textContent = `音声通話 ${content}`;
+          phoneText.textContent = content;
           bubble.appendChild(phoneText);
         } else {
           let processedContent = content || "";
@@ -321,6 +329,20 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    // 権限事前チェック関数
+    async function checkScreenSharePermission() {
+      try {
+        // 簡単なテスト用の画面共有を試行
+        const testStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { width: 1, height: 1 }
+        });
+        testStream.getTracks().forEach(track => track.stop());
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
     // 録画機能
     async function startScreenRecording() {
       try {
@@ -332,6 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
           recWinGlobal.close();
         }
 
+        // 録画用ウィンドウを先に作成
         const recWinWidth = chatDisplay.offsetWidth;
         const recWinHeight = 1040;
         recWinGlobal = window.open(
@@ -362,77 +385,109 @@ document.addEventListener("DOMContentLoaded", () => {
         recWinGlobal.document.write(htmlContent);
         recWinGlobal.document.close();
 
-        recWinGlobal.onload = async () => {
-          const recChatDisplay = recWinGlobal.document.getElementById("chatDisplay");
-          const recChatLeft = recChatDisplay.querySelector(".chat-left");
+        // ウィンドウの準備を待つ
+        await new Promise((resolve) => {
+          if (recWinGlobal.document.readyState === 'complete') {
+            resolve();
+          } else {
+            recWinGlobal.onload = resolve;
+          }
+        });
+
+        const recChatDisplay = recWinGlobal.document.getElementById("chatDisplay");
+        const recChatLeft = recChatDisplay.querySelector(".chat-left");
+        
+        if (!recChatDisplay || !recChatLeft) {
+          alert("録画用ウィンドウの準備に失敗しました。");
+          if(recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
+          return;
+        }
+
+        recChatDisplay.classList.add("recording-mode");
+        recChatLeft.classList.add("hide-scrollbar", "disable-mouse", "hide-cursor");
+        recChatDisplay.style.height = `${recWinHeight}px`;
+        recChatLeft.scrollTop = 0;
+
+        // 録画用ウィンドウが完成してから画面共有を開始
+        let stream;
+        try {
+          alert("録画用ウィンドウが開きました。\n次に表示される画面共有ダイアログで「録画対象」ウィンドウを選択してください。");
           
-          if (!recChatDisplay || !recChatLeft) {
-            alert("録画用ウィンドウの準備に失敗しました。");
-            if(recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
-            return;
-          }
-
-          recChatDisplay.classList.add("recording-mode");
-          recChatLeft.classList.add("hide-scrollbar", "disable-mouse", "hide-cursor");
-          recChatDisplay.style.height = `${recWinHeight}px`;
-          recChatLeft.scrollTop = 0;
-
-          alert("録画用の新しいウィンドウが開きました。\n画面共有の選択ダイアログでこのウィンドウを選択してください。");
-
-          let stream;
-          try {
-            stream = await navigator.mediaDevices.getDisplayMedia({
-              video: { 
-                frameRate: 30, 
-                cursor: "never",
-                displaySurface: "window"
-              },
-              audio: false,
-            });
-          } catch (err) {
-            console.error("getDisplayMedia エラー:", err);
-            alert(createRecordingErrorMessage(err));
-            if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
-            return;
-          }
-          
-          if (!stream) {
-            alert("画面共有が選択されませんでした。録画を中止します。");
-            if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
-            return;
-          }
-
-          mediaRecorder = new MediaRecorder(stream, {
-            mimeType: "video/webm;codecs=vp9",
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { 
+              frameRate: { ideal: 30, max: 60 },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              displaySurface: "window"
+            },
+            audio: false,
           });
-          recordedChunks = [];
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) recordedChunks.push(e.data);
-          };
-          mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: "video/webm" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "pairs-chat-recording.webm";
-            a.click();
-            URL.revokeObjectURL(url);
-            if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
-            isRecording = false;
-            startRecordingButton.disabled = false;
-            stopRecordingButton.disabled = true;
-          };
-
-          mediaRecorder.start();
-          isRecording = true;
-          startRecordingButton.disabled = true;
-          stopRecordingButton.disabled = false;
+        } catch (err) {
+          console.error("getDisplayMedia エラー:", err);
           
-          autoScrollChatInWindow(recChatLeft);
+          // AbortErrorの場合は再試行オプションを提供
+          if (err.name === 'AbortError') {
+            const retry = confirm(
+              "画面共有がキャンセルまたは中断されました。\n\n" +
+              "よくある解決方法:\n" +
+              "• 他のアプリが画面共有を使用していないか確認\n" +
+              "• ブラウザタブを少し減らす\n" +
+              "• 5秒ほど待ってから再試行\n\n" +
+              "今すぐ再試行しますか？"
+            );
+            if (retry) {
+              setTimeout(() => {
+                startScreenRecording();
+              }, 3000);
+              return;
+            }
+          }
+          
+          alert(createRecordingErrorMessage(err));
+          if(recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
+          return;
+        }
+        
+        if (!stream) {
+          alert("画面共有が選択されませんでした。録画を中止します。");
+          if(recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
+          return;
+        }
+
+        // MediaRecorderを設定して録画開始
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType: "video/webm;codecs=vp9",
+        });
+        recordedChunks = [];
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
         };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "pairs-chat-recording.webm";
+          a.click();
+          URL.revokeObjectURL(url);
+          if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
+          isRecording = false;
+          startRecordingButton.disabled = false;
+          stopRecordingButton.disabled = true;
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        startRecordingButton.disabled = true;
+        stopRecordingButton.disabled = false;
+        
+        alert("録画を開始しました。自動スクロールが始まります。");
+        autoScrollChatInWindow(recChatLeft);
+        
       } catch (err) {
         console.error("録画開始エラー:", err);
         alert("録画を開始できませんでした。");
+        if (recWinGlobal && !recWinGlobal.closed) recWinGlobal.close();
       }
     }
   
