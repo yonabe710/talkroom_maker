@@ -43,6 +43,7 @@ body {
     flex-direction: column;
     min-height: 0; 
     overflow-y: auto;
+    overflow-x: hidden;
   }
   .chat-left.hide-scrollbar {
     scrollbar-width: none; 
@@ -167,11 +168,12 @@ fieldset legend {
     word-break: break-word;
     line-height: 1.2;
     padding: 0 20px;
-    max-width: 90%;
+    max-width: calc(100% - 20px);
     white-space: pre-line;
-    margin: 0 auto 32px auto;
+    margin: 0 auto 128px auto;
     display: block;
     position: relative;
+    box-sizing: border-box;
   }
   
   /* チャットメッセージエリア */
@@ -191,7 +193,7 @@ fieldset legend {
   .chat-messages::after {
   content: "";
   display: block;
-  height: 500px;
+  height: 250px;
   flex-shrink: 0;
 }
   
